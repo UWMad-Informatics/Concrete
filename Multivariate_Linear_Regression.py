@@ -67,8 +67,6 @@ worstRMSEPredicted = None
 worstCoef = None
 worstIntercept = None
 
-# Declare the regression to be a dictionary
-
 print("-----Running CV tests. Please wait-----")
 for z in range(0, numberOfTests):
 
@@ -84,44 +82,46 @@ for z in range(0, numberOfTests):
         print("[////////////////] 100% completion")
 
     # Randomly break the data up into training and testing. Will use 80% for training, 20% for testing.
-    TestIndices = np.array([])
-    while TestIndices.__len__() < int(0.8*dataSize):
+    TrainIndices = np.array([])
+    while TrainIndices.__len__() < int(0.8*dataSize):
         # Randomly select an index value and store it. If it has already been chosen, pick again.
         index = int(random.random() * dataSize)
-        if not TestIndices.__contains__(index):
-            TestIndices = np.append(TestIndices, [index])
+        if not TrainIndices.__contains__(index):
+            TrainIndices = np.append(TrainIndices, [index])
+
     # For aesthetic purposes:
-    TestIndices = np.sort(TestIndices)
+    TrainIndices = np.sort(TrainIndices)
 
     # For the desired training indices, add the values to the training arrays
-    predictorTrainValues = np.array([])
+    xTrainValues = np.array([])
     yTrainValues = np.array([])
 
-    for q in range(0, TestIndices.__len__()):
-        predictorTrainValues = np.append(predictorTrainValues, [iValues.take(q), jValues.take(q)])
-        yTrainValues = np.append(yTrainValues, yValues.take(q))
+    for q in range(0, dataSize):
+        if TrainIndices.__contains__(q):
+            xTrainValues = np.append(xTrainValues, [iValues.take(q), jValues.take(q)])
+            yTrainValues = np.append(yTrainValues, yValues.take(q))
 
     # Reshape the numpy arrays into a usable format
-    predictorTrainValues = predictorTrainValues.reshape((int(0.8 * dataSize), 2))
+    xTrainValues = xTrainValues.reshape((int(0.8 * dataSize), 2))
     yTrainValues = yTrainValues.reshape((int(0.8 * dataSize), 1))
 
     # Run a linear regression on the training data
     regr = linear_model.LinearRegression()
-    regr.fit(predictorTrainValues, yTrainValues)
+    regr.fit(xTrainValues, yTrainValues)
 
     # Now, create the testing arrays:
-    predictorTestValues = np.array([])
+    xTestValues = np.array([])
     yTestValues = np.array([])
 
     for p in range(0, dataSize):
-        if not TestIndices.__contains__(p):
-            predictorTestValues = np.append(predictorTestValues, [iValues.take(p), jValues.take(p)])
+        if not TrainIndices.__contains__(p):
+            xTestValues = np.append(xTestValues, [iValues.take(p), jValues.take(p)])
             yTestValues = np.append(yTestValues, [yValues.take(p)])
-    predictorTestValues = predictorTestValues.reshape((int(0.2*dataSize), 2))
+    xTestValues = xTestValues.reshape((int(0.2*dataSize), 2))
     yTestValues = yTestValues.reshape((int(0.2*dataSize), 1))
 
     # Predict the values
-    predictedYValues = regr.predict(predictorTestValues)
+    predictedYValues = regr.predict(xTestValues)
 
     # Find the RMSE value and add it to the RMSE array:
     RMSE = sqrt(mean_squared_error(yTestValues, predictedYValues))
@@ -180,9 +180,5 @@ for i in range(0, numberRMSEBins):
 RMSEhistogram = plt.figure(3)
 plt.hist(RMSEValues, RMSEbins, histtype='bar')
 RMSEhistogram.suptitle('Histogram of RMSE Values')
-
-print("")
-print("One thing to figure out is why the best and worst RMSE equations are the same. I can't figure it out for the",
-      " life of me.")
 
 plt.show()
