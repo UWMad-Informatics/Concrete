@@ -1,0 +1,111 @@
+Mix Number,Mix Proportion,Cement,SCM,Fine Aggregate,Coarse Aggregate
+1,A,1,N/A,Sand A,GG1
+2,A,1,N/A,Sand A,GG2
+3,A,1,N/A,Sand A,GG3
+4,A,1,N/A,Sand A,GG4
+5,A,1,N/A,Sand A,GG5
+6,A,1,N/A,Sand A,GG6
+7,A,1,N/A,Sand A,CS1
+8,A,1,N/A,Sand A,CS2
+9,A,1,N/A,Sand A,CS3
+10,A,1,N/A,Sand A,CS4
+11,A,1,N/A,Sand A,CS5
+12,A,1,N/A,Sand A,CS6
+13,A,1,N/A,Sand A,CS7
+14,A,1,N/A,Sand A,CS8
+15,A,1,N/A,Sand A,CS9
+16,A-S,1,Slag 1,Sand A,GG1
+17,A-S,1,Slag 1,Sand A,GG2
+18,A-S,1,Slag 1,Sand A,GG3
+19,A-S,1,Slag 1,Sand A,GG4
+20,A-S,1,Slag 1,Sand A,GG5
+21,A-S,1,Slag 1,Sand A,GG6
+22,A-S,1,Slag 1,Sand A,CS1
+23,A-S,1,Slag 1,Sand A,CS2
+24,A-S,1,Slag 1,Sand A,CS3
+25,A-S,1,Slag 1,Sand A,CS4
+26,A-S,1,Slag 1,Sand A,CS5
+27,A-S,1,Slag 1,Sand A,CS6
+28,A-S,1,Slag 1,Sand A,CS7
+29,A-S,1,Slag 1,Sand A,CS8
+30,A-S,1,Slag 1,Sand A,CS9
+31,A-F,1,Fly Ash 1,Sand A,GG1
+32,A-F,1,Fly Ash 1,Sand A,GG2
+33,A-F,1,Fly Ash 1,Sand A,GG3
+34,A-F,1,Fly Ash 1,Sand A,GG4
+35,A-F,1,Fly Ash 1,Sand A,GG5
+36,A-F,1,Fly Ash 1,Sand A,GG6
+37,A-F,1,Fly Ash 1,Sand A,CS1
+38,A-F,1,Fly Ash 1,Sand A,CS2
+39,A-F,1,Fly Ash 1,Sand A,CS3
+40,A-F,1,Fly Ash 1,Sand A,CS4
+41,A-F,1,Fly Ash 1,Sand A,CS5
+42,A-F,1,Fly Ash 1,Sand A,CS6
+43,A-F,1,Fly Ash 1,Sand A,CS7
+44,A-F,1,Fly Ash 1,Sand A,CS8
+45,A-F,1,Fly Ash 1,Sand A,CS9
+46,A-S,2,Slag 1,Sand A,GG1
+47,A-S,2,Slag 1,Sand A,GG2
+48,A-S,2,Slag 1,Sand A,CS1
+49,A-S,2,Slag 1,Sand A,CS2
+50,A-S,2,Slag 1,Sand A,CS3
+51,A-S,2,Slag 2,Sand A,GG1
+52,A-S,2,Slag 2,Sand A,GG2
+53,A-S,2,Slag 2,Sand A,CS1
+54,A-S,2,Slag 2,Sand A,CS2
+55,A-S,2,Slag 2,Sand A,CS3
+56,A-F,2,Fly Ash 1,Sand A,GG1
+57,A-F,2,Fly Ash 1,Sand A,GG2
+58,A-F,2,Fly Ash 1,Sand A,CS1
+59,A-F,2,Fly Ash 1,Sand A,CS2
+60,A-F,2,Fly Ash 1,Sand A,CS3
+61,A-F,2,Fly Ash 2,Sand A,GG1
+62,A-F,2,Fly Ash 2,Sand A,GG2
+63,A-F,2,Fly Ash 2,Sand A,CS1
+64,A-F,2,Fly Ash 2,Sand A,CS2
+65,A-F,2,Fly Ash 2,Sand A,CS3
+66,A-F,2,Fly Ash 3,Sand A,GG1
+67,A-F,2,Fly Ash 3,Sand A,GG2
+68,A-F,2,Fly Ash 3,Sand A,CS1
+69,A-F,2,Fly Ash 3,Sand A,CS2
+70,A-F,2,Fly Ash 3,Sand A,CS3
+71,A-S,1,Slag 2,Sand A,GG1
+72,A-S,1,Slag 2,Sand A,GG2
+73,A-S,1,Slag 2,Sand A,CS1
+74,A-S,1,Slag 2,Sand A,CS2
+75,A-S,1,Slag 2,Sand A,CS3
+76,A-F,1,Fly Ash 2,Sand A,GG1
+77,A-F,1,Fly Ash 2,Sand A,GG2
+78,A-F,1,Fly Ash 2,Sand A,CS1
+79,A-F,1,Fly Ash 2,Sand A,CS2
+80,A-F,1,Fly Ash 2,Sand A,CS3
+81,A-F,1,Fly Ash 3,Sand A,GG1
+82,A-F,1,Fly Ash 3,Sand A,GG2
+83,A-F,1,Fly Ash 3,Sand A,CS1
+84,A-F,1,Fly Ash 3,Sand A,CS2
+85,A-F,1,Fly Ash 3,Sand A,CS3
+86,A-S,1,Slag 1,Sand B,GG1
+87,A-S,1,Slag 1,Sand B,GG2
+88,A-S,1,Slag 1,Sand B,CS1
+89,A-S,1,Slag 1,Sand B,CS2
+90,A-S,1,Slag 1,Sand B,CS3
+91,A-S,1,Slag 2,Sand B,GG1
+92,A-S,1,Slag 2,Sand B,GG2
+93,A-S,1,Slag 2,Sand B,CS1
+94,A-S,1,Slag 2,Sand B,CS2
+95,A-S,1,Slag 2,Sand B,CS3
+96,A-F,1,Fly Ash 1,Sand B,GG1
+97,A-F,1,Fly Ash 1,Sand B,GG2
+98,A-F,1,Fly Ash 1,Sand B,CS1
+99,A-F,1,Fly Ash 1,Sand B,CS2
+100,A-F,1,Fly Ash 1,Sand B,CS3
+101,A-F,1,Fly Ash 2,Sand B,GG1
+102,A-F,1,Fly Ash 2,Sand B,GG2
+103,A-F,1,Fly Ash 2,Sand B,CS1
+104,A-F,1,Fly Ash 2,Sand B,CS2
+105,A-F,1,Fly Ash 2,Sand B,CS3
+106,A-F,1,Fly Ash 3,Sand B,GG1
+107,A-F,1,Fly Ash 3,Sand B,GG2
+108,A-F,1,Fly Ash 3,Sand B,CS1
+109,A-F,1,Fly Ash 3,Sand B,CS2
+110,A-F,1,Fly Ash 3,Sand B,CS3
