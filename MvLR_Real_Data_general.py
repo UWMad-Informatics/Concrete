@@ -121,7 +121,7 @@ def main():
     # For now, do not assume that the data we are using starts with 31 y-variable columns
     numYvariables = int(input("How many y variables are there? NOTE: Add 1 to the total to account for the column labels. "))
 
-    # get the names of he variables
+    # get the names of the variables
     variableNames = list(completearray.columns.values)
     yVariableNames = variableNames[:numYvariables]
     xVariableNames = variableNames[numYvariables:]
@@ -134,7 +134,7 @@ def main():
     numberOfTests = int(input("How many CV tests should be done for each y variable? "))
 
     # Prompt for the percentage of data to use for training. The remaining amount will be used for testing.
-    percentTest = int(input("What percentage of data do you want to use for testing? ")) / 100
+    percentTest = int(input("What percentage of data do you want to use for training? ")) / 100
 
     # Create a .txt file to store the output in:
     output_file = open("output_file.txt",'w')
