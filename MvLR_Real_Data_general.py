@@ -94,20 +94,20 @@ def createstring(yVariable, RMSEValues, bestRMSE, bestCoef, bestIntercept, worst
     """Creates a formatted string to print to the .txt output file"""
 
     outputstring = "Results for " + str(currentYVariable) + ":\n\n" + "The mean of the y-variable was "\
-                   + str(yVariable.mean()) + " and the standard deviation was " + str(yVariable.std()) + ".\n"\
-                   + "The mean of the RMSE values" + " is " + str(RMSEValues.mean())\
-                   + " and the standard deviation is " + str(RMSEValues.std()) + ".\n"
+                   + "{0:.3f}".format(yVariable.mean()) + " and the standard deviation was " + "{0:.3f}".format(yVariable.std()) + ".\n"\
+                   + "The mean of the RMSE values" + " is " + "{0:.3f}".format(RMSEValues.mean())\
+                   + " and the standard deviation is " + "{0:.3f}".format(RMSEValues.std()) + ".\n"
 
-    best_regression_string = "The worst RMSE was " + str(bestRMSE) + " with a regression equation of: "
+    best_regression_string = "The worst RMSE was " + "{0:.3f}".format(bestRMSE) + " with a regression equation of: "
     for m in range(0,bestCoef[0].__len__()):
-        best_regression_string = best_regression_string + str(bestCoef[0][m]) + "*" + xVariableNames[m] + " + "
-    best_regression_string = best_regression_string + str(bestIntercept[0]) + ".\n"
+        best_regression_string = best_regression_string + "{0:.3f}".format(bestCoef[0][m]) + "*" + xVariableNames[m] + " + "
+    best_regression_string = best_regression_string + "{0:.3f}".format(bestIntercept[0]) + ".\n"
 
     worst_regression_string = "The worst RMSE was " + str(worstRMSE) + " with a regression equation of: "
     for n in range(0,worstCoef[0].__len__()):
-        worst_regression_string = worst_regression_string + str(worstCoef[0][n]) + "*" + xVariableNames[n]\
+        worst_regression_string = worst_regression_string + "{0:.3f}".format(worstCoef[0][n]) + "*" + xVariableNames[n]\
                                   + " + "
-    worst_regression_string = worst_regression_string + str(worstIntercept[0]) + ".\n\n\n"
+    worst_regression_string = worst_regression_string + "{0:.3f}".format(worstIntercept[0]) + ".\n\n\n"
 
     outputstring = outputstring + best_regression_string + worst_regression_string
 
@@ -139,7 +139,7 @@ def main():
     # Create a .txt file to store the output in:
     output_file = open("output_file.txt",'w')
     numberOfTestsstring = "For this run, the total number of CV tests done on each y-variable was "\
-        + str(numberOfTests) + ".\n" + str(percentTest*100) + "% of the data was used for training.\n\n"
+        + str(numberOfTests) + ".\n Furthermore, " + str(percentTest*100) + "% of the data was used for training.\n\n"
     output_file.write(numberOfTestsstring)
 
     # For each of the Y variables, want to run a linear regression:
