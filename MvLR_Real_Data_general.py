@@ -139,7 +139,7 @@ def main():
     # Create a .txt file to store the output in:
     output_file = open("output_file.txt",'w')
     numberOfTestsstring = "For this run, the total number of CV tests done on each y-variable was "\
-        + str(numberOfTests) + ".\n" + str(percentTest*100) + "% of the data was used for testing.\n\n"
+        + str(numberOfTests) + ".\n" + str(percentTest*100) + "% of the data was used for training.\n\n"
     output_file.write(numberOfTestsstring)
 
     # For each of the Y variables, want to run a linear regression:
