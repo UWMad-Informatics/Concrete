@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import random as random
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from math import sqrt
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error
@@ -17,7 +18,7 @@ def readcsv():
     completearray = pd.read_csv(filename, delimiter=',')
     completenumpyarray = np.transpose(completearray.as_matrix())
 
-    return completearray, completenumpyarray
+    return completearray, completenumpyarray, filename
 
 
 def generaterandomindices(dataSize, percentTest):
@@ -93,21 +94,26 @@ def createstring(yVariable, RMSEValues, bestRMSE, bestCoef, bestIntercept, worst
 
     """Creates a formatted string to print to the .txt output file"""
 
-    outputstring = "Results for " + str(currentYVariable) + ":\n\n" + "The mean of the y-variable was "\
-                   + "{0:.3f}".format(yVariable.mean()) + " and the standard deviation was " + "{0:.3f}".format(yVariable.std()) + ".\n"\
-                   + "The mean of the RMSE values" + " is " + "{0:.3f}".format(RMSEValues.mean())\
-                   + " and the standard deviation is " + "{0:.3f}".format(RMSEValues.std()) + ".\n"
+    outputstring = "-------------------------\n" \
+                   "Results for " + str(currentYVariable) + ":" \
+                   "\n-------------------------\n"\
+                   + "- The mean of the y-variable was " + "{0:.4e}".format(yVariable.mean()) + " and the standard" \
+                            " deviation was " + "{0:.4e}".format(yVariable.std()) + ".\n"\
+                   + "- The mean of the RMSE values was " + "{0:.4e}".format(RMSEValues.mean()) + " and the standard" \
+                            " deviation was " + "{0:.4e}".format(RMSEValues.std()) + ".\n"
 
-    best_regression_string = "The worst RMSE was " + "{0:.3f}".format(bestRMSE) + " with a regression equation of: "
+    best_regression_string = "- The best RMSE was " + "{0:.4e}".format(bestRMSE) + " with a regression equation of:\n    "
+
     for m in range(0,bestCoef[0].__len__()):
-        best_regression_string = best_regression_string + "{0:.3f}".format(bestCoef[0][m]) + "*" + xVariableNames[m] + " + "
-    best_regression_string = best_regression_string + "{0:.3f}".format(bestIntercept[0]) + ".\n"
+        best_regression_string = best_regression_string + "{0:.4e}".format(bestCoef[0][m]) + "*" + "(" + xVariableNames[m] + ")" + " + "
+    best_regression_string = best_regression_string + "{0:.4e}".format(bestIntercept[0]) + ".\n"
 
-    worst_regression_string = "The worst RMSE was " + str(worstRMSE) + " with a regression equation of: "
+    worst_regression_string = "- The worst RMSE was " + "{0:.4e}".format(worstRMSE) + " with a regression equation of:\n   "
+
     for n in range(0,worstCoef[0].__len__()):
-        worst_regression_string = worst_regression_string + "{0:.3f}".format(worstCoef[0][n]) + "*" + xVariableNames[n]\
+        worst_regression_string = worst_regression_string + "{0:.4e}".format(worstCoef[0][n]) + "*" + "(" + xVariableNames[n] + ")"\
                                   + " + "
-    worst_regression_string = worst_regression_string + "{0:.3f}".format(worstIntercept[0]) + ".\n\n\n"
+    worst_regression_string = worst_regression_string + "{0:.4e}".format(worstIntercept[0]) + ".\n\n\n"
 
     outputstring = outputstring + best_regression_string + worst_regression_string
 
@@ -116,7 +122,7 @@ def createstring(yVariable, RMSEValues, bestRMSE, bestCoef, bestIntercept, worst
 
 def main():
 
-    completearray, completeNumpyArray = readcsv()
+    completearray, completeNumpyArray, filename = readcsv()
 
     # For now, do not assume that the data we are using starts with 31 y-variable columns
     numYvariables = int(input("How many y variables are there? NOTE: Add 1 to the total to account for the column labels. "))
@@ -138,8 +144,12 @@ def main():
 
     # Create a .txt file to store the output in:
     output_file = open("output_file.txt",'w')
-    numberOfTestsstring = "For this run, the total number of CV tests done on each y-variable was "\
-        + str(numberOfTests) + ".\n Furthermore, " + str(percentTest*100) + "% of the data was used for training.\n\n"
+    numberOfTestsstring = "\n---------------------------------------------------------------------------\n" \
+                          "Name of input file: " + filename + "\n" \
+                          + "Total number of y - variables: " + str(numYvariables) + "\n" \
+                          + "For this run, the total number of CV tests done on each y-variable was " + str(numberOfTests)\
+                          + ".\nFurthermore, " + str(percentTest*100) + "% of the data was used for training.\n" \
+                          "---------------------------------------------------------------------------\n\n\n"
     output_file.write(numberOfTestsstring)
 
     # For each of the Y variables, want to run a linear regression:
@@ -157,12 +167,15 @@ def main():
 
         # Create a histogram of the current y variable
         histogramOfY = figure.add_subplot(2, 2, 1)
+        histogramOfY.locator_params(axis='x',nbins=5)
+        histogramOfY.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         plt.hist(np.transpose(yVariable),histtype="bar")
-        histogramOfY.title.set_text('Histogram of Y-Values')
+        histogramOfY.set_title('Histogram of Y-Values')
+        histogramOfY.set_xlabel('Y-Values')
+        histogramOfY.set_ylabel('Number in Range')
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         RMSEValues = np.array([])
-
         # Initialize values for the best and worst RMSE
         bestRMSE = 1000000
         bestRMSEData = None
@@ -179,7 +192,7 @@ def main():
         for z in range(0, numberOfTests):
 
             # Randomly break the data up into training and testing. Will use input percentage for training,
-            #  20% for testing.
+            # 20% for testing.
             TrainIndices = generaterandomindices(dataSize, percentTest)
             xTrainValues, yTrainValues = createtrainingarrays(dataSize, xVariables, yVariable, TrainIndices)
 
@@ -215,16 +228,44 @@ def main():
 
         # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
         bestRMSEplot = figure.add_subplot(2,2,2)
+        bestRMSEplot.locator_params(axis='x',nbins=5)
+        bestRMSEplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+        bestRMSEplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         plt.scatter(bestRMSEData, bestRMSEPredicted, marker="o", color="b")
-        bestRMSEplot.title.set_text('Actual vs. Predicted Values for Best RMSE')
+        bestRMSEplot.set_title('Actual vs. Predicted Values for Best RMSE')
+        bestRMSEplot.set_xlabel('Actual Values')
+        bestRMSEplot.set_ylabel('Predicted Values')
+        ymin = np.amin(bestRMSEPredicted) - np.std(bestRMSEPredicted)
+        ymax = np.amax(bestRMSEPredicted) + np.std(bestRMSEPredicted)
+        xmin = np.amin(bestRMSEData) - np.std(bestRMSEData)
+        xmax = np.amax(bestRMSEData) + np.std(bestRMSEData)
+        bestRMSEplot.set_ylim([ymin,ymax])
+        bestRMSEplot.set_xlim([xmin,xmax])
 
         worstRMSEplot = figure.add_subplot(2,2,3)
+        worstRMSEplot.locator_params(axis='x',nbins=5)
+        worstRMSEplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+        worstRMSEplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         plt.scatter(worstRMSEData, worstRMSEPredicted, marker="o", color="b")
-        worstRMSEplot.title.set_text('Actual vs. Predicted Values for Worst RMSE')
+        worstRMSEplot.set_title('Actual vs. Predicted Values for Worst RMSE')
+        worstRMSEplot.set_xlabel('Actual Values')
+        worstRMSEplot.set_ylabel('Predicted Values')
+        ymin = np.amin(worstRMSEPredicted) - np.std(worstRMSEPredicted)
+        ymax = np.amax(worstRMSEPredicted) + np.std(worstRMSEPredicted)
+        xmin = np.amin(worstRMSEData) - np.std(worstRMSEData)
+        xmax = np.amax(worstRMSEData) + np.std(worstRMSEData)
+        worstRMSEplot.set_ylim([ymin, ymax])
+        worstRMSEplot.set_xlim([xmin, xmax])
 
         RMSEhist = figure.add_subplot(2,2,4)
+        RMSEhist.locator_params(axis='x',nbins=5)
+        RMSEhist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         plt.hist(RMSEValues,histtype="bar")
-        RMSEhist.title.set_text('Histogram of RMSE Values')
+        RMSEhist.set_title('Histogram of RMSE Values')
+        RMSEhist.set_xlabel('RMSE Value')
+        RMSEhist.set_ylabel('Number in Range')
+
+        plt.tight_layout()
 
         # Store the information from the run in an output .txt file
         outputstring = createstring(yVariable, RMSEValues, bestRMSE, bestCoef, bestIntercept, worstRMSE, worstCoef,
