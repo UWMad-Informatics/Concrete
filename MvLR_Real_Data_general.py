@@ -98,15 +98,15 @@ def createstring(yVariable, RMSEValues, bestRMSE, bestCoef, bestIntercept, worst
                    "Results for " + str(currentYVariable) + ":" \
                    "\n-------------------------\n"\
                    + "- The mean of the y-variable was " + "{0:.4e}".format(yVariable.mean()) + " and the standard" \
-                            " deviation was " + "{0:.4e}".format(yVariable.std()) + ".\n"\
+                            " deviation was " + "{0:.4e}".format(yVariable.std()) + ".\n\n"\
                    + "- The mean of the RMSE values was " + "{0:.4e}".format(RMSEValues.mean()) + " and the standard" \
-                            " deviation was " + "{0:.4e}".format(RMSEValues.std()) + ".\n"
+                            " deviation was " + "{0:.4e}".format(RMSEValues.std()) + ".\n\n"
 
     best_regression_string = "- The best RMSE was " + "{0:.4e}".format(bestRMSE) + " with a regression equation of:\n    "
 
     for m in range(0,bestCoef[0].__len__()):
         best_regression_string = best_regression_string + "{0:.4e}".format(bestCoef[0][m]) + "*" + "(" + xVariableNames[m] + ")" + " + "
-    best_regression_string = best_regression_string + "{0:.4e}".format(bestIntercept[0]) + ".\n"
+    best_regression_string = best_regression_string + "{0:.4e}".format(bestIntercept[0]) + ".\n\n"
 
     worst_regression_string = "- The worst RMSE was " + "{0:.4e}".format(worstRMSE) + " with a regression equation of:\n   "
 
@@ -146,7 +146,7 @@ def main():
     output_file = open("output_file.txt",'w')
     numberOfTestsstring = "\n---------------------------------------------------------------------------\n" \
                           "Name of input file: " + filename + "\n" \
-                          + "Total number of y - variables: " + str(numYvariables) + "\n" \
+                          + "Total number of y - variables: " + str(numYvariables-1) + "\n" \
                           + "For this run, the total number of CV tests done on each y-variable was " + str(numberOfTests)\
                           + ".\nFurthermore, " + str(percentTest*100) + "% of the data was used for training.\n" \
                           "---------------------------------------------------------------------------\n\n\n"
