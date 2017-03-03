@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import sklearn as sklearn
 import random as random
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -141,7 +142,9 @@ def initializeData():
         numyvariables = 6
         yvariablenames = [variablenames[x] for x in batchAYcolumns]
         batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 29, 32, 35, 38, 41]
-        xvariables = completenumpyarray[:, batchAXcolumns]
+        # normalize the x variables (mean = 0, standard deviation = 1). Will normalize y variables in the main body
+        # after a histogram of the data is created.
+        xvariables = sklearn.preprocessing.normalize(completenumpyarray[:, batchAXcolumns])
         xvariablenames = [variablenames[x] for x in batchAXcolumns]
 
     elif batch == "B":
@@ -152,7 +155,9 @@ def initializeData():
         numyvariables = 17
         yvariablenames = [variablenames[x] for x in batchBYcolumns]
         batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 30, 33, 36, 39, 42]
-        xvariables = completenumpyarray[:, batchAXcolumns]
+        # normalize the x variables (mean = 0, standard deviation = 1). Will normalize y variables in the main body
+        # after a histogram of the data is created.
+        xvariables = sklearn.preprocessing.normalize(completenumpyarray[:, batchAXcolumns],axis=0)
         xvariablenames = [variablenames[x] for x in batchAXcolumns]
 
     else:
@@ -234,15 +239,17 @@ def createtestarrays(datasize, xvariables, yvariable, trainindices):
 
 
 # TODO: createstring
-def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable,yvariable):
+def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable, notnormalizedmean, notnormalizedstd):
 
     """Creates a formatted string to print to the .txt output file"""
 
     outputstring = "-------------------------\n" \
                    "Results for " + str(currentyvariable) + ":" \
                                                             "\n-------------------------\n" \
-                   + "- The mean of the y-variable was " + "{0:.4e}".format(yvariable.mean()) + " and the standard" \
-                   + " deviation was " + "{0:.4e}".format(yvariable.std()) + ".\n\n" \
+                    "- The mean of the yvariable was " + "{0:.4e}".format(notnormalizedmean) + " and the standard" \
+                    " deviation was " + "{0:.4e}".format(notnormalizedstd) + "\n\n" \
+                   + "- The mean of the normalized y-variable was " + "{0:.4e}".format(yvariable.mean()) + " and the " \
+                    "standard deviation was " + "{0:.4e}".format(yvariable.std()) + ".\n\n" \
                    + "- The mean of the RMSE values was " + "{0:.4e}".format(rmsevalues.mean()) + " and the standard" \
                    + " deviation was " + "{0:.4e}".format(rmsevalues.std()) + ".\n\n"
 
@@ -283,6 +290,8 @@ def main():
         # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
         datasize = np.size(yvariables[i])
         yvariable = yvariables[i].reshape(1, datasize)
+        notnormalizedmean = yvariable.mean()
+        notnormalizedstd = yvariable.std()
         currentyvariable = yvariablenames[i]
 
         # Create a figure that will store the subplots (for this particular y variable)
@@ -298,6 +307,9 @@ def main():
         histogramofy.set_title('Histogram of Y-Values')
         histogramofy.set_xlabel('Y-Values')
         histogramofy.set_ylabel('Number in Range')
+
+        # Once the histogram is plotted, normalize the current y variable.
+        yvariable = sklearn.preprocessing.normalize(yvariable)
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         rmsevalues = np.array([])
@@ -383,7 +395,8 @@ def main():
 
         plt.tight_layout()
 
-        outputstring = createstring(rmsevalues, bestrmse, worstrmse, currentyvariable,yvariable)
+        outputstring = createstring(rmsevalues, bestrmse, worstrmse, currentyvariable,yvariable,notnormalizedmean,
+                                    notnormalizedstd)
         output_file.write(outputstring)
 
     output_file.close()
