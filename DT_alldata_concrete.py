@@ -107,31 +107,39 @@ def initializeData():
             print(coarseA[y])
 
     # One Hot Encode the sorted variables
+    encodedMixP = pd.get_dummies(mixPFinal)
     encodedSCM = pd.get_dummies(scmFinal)
     encodedFineA = pd.get_dummies(fineAFinal)
     encodedCoarseA = pd.get_dummies(coarseAFinal)
 
-    # Update the headers
+    # Update the headers for onehotencoded variables
+    # Get the current variable names
     encodedSCMlist = list(encodedSCM.columns.values)
     encodedFineAlist = list(encodedFineA.columns.values)
     encodedCoarseAlist = list(encodedCoarseA.columns.values)
+    encodedMixPlist = list(encodedMixP.columns.values)
+    # go through and replace the current names with the updated ones
     encodedSCM.rename(columns={encodedSCMlist[0]: 'SCM_0', encodedSCMlist[1]: 'SCM_1', encodedSCMlist[2]: 'SCM_1000'},
                       inplace=True)
     encodedFineA.rename(columns={encodedFineAlist[0]: 'FineA_0', encodedFineAlist[1]: 'FineA_1'}, inplace=True)
     encodedCoarseA.rename(columns={encodedCoarseAlist[0]: 'CoarseA_0', encodedCoarseAlist[1]: 'CoarseA_1'},
                           inplace=True)
+    encodedMixP.rename(columns={encodedMixPlist[0]: 'MixP_0', encodedMixPlist[1]: 'MixP_1', encodedMixPlist[2]: 'MixP_2'},
+                       inplace=True)
 
     # Remake the dataframe to include the onehotencoded columns instead of the regular columns.
     firstHalf = allX.ix[:, :21]
     cte = allX.ix[:, 25]
-    oneHotEncodedframe = pd.concat([encodedSCM, encodedFineA, encodedFineA], axis=1)
+    oneHotEncodedframe = pd.concat([encodedMixP, encodedSCM, encodedFineA, encodedFineA], axis=1)
     secondHalf = xValues.ix[:, 6:]
 
     completearray = pd.concat([firstHalf, cte, oneHotEncodedframe, secondHalf], axis=1)
     variablenames = list(completearray.columns.values)
+    # convert to numpy array
     completenumpyarray = completearray.as_matrix()
 
-    # Ask whether or not to run decision trees on batch A data or batch B
+    #####
+    # Now, Ask whether or not to run decision trees on batch A data or batch B
     batch = input("which batch to run tests on (A or B)? ")
 
     if batch == "A":
@@ -142,7 +150,7 @@ def initializeData():
         numyvariables = 6
         yvariablenames = [variablenames[x] for x in batchAYcolumns]
         batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 29, 32, 35, 38, 41]
-        # normalize the x variables (mean = 0, standard deviation = 1). Will normalize y variables in the main body
+        # normalize the x variables. Will normalize y variables in the main body
         # after a histogram of the data is created.
         xvariables = sklearn.preprocessing.normalize(completenumpyarray[:, batchAXcolumns])
         xvariablenames = [variablenames[x] for x in batchAXcolumns]
@@ -155,7 +163,7 @@ def initializeData():
         numyvariables = 17
         yvariablenames = [variablenames[x] for x in batchBYcolumns]
         batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 30, 33, 36, 39, 42]
-        # normalize the x variables (mean = 0, standard deviation = 1). Will normalize y variables in the main body
+        # normalize the x variables. Will normalize y variables in the main body
         # after a histogram of the data is created.
         xvariables = sklearn.preprocessing.normalize(completenumpyarray[:, batchAXcolumns],axis=0)
         xvariablenames = [variablenames[x] for x in batchAXcolumns]
