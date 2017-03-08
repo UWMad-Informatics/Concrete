@@ -216,7 +216,7 @@ def main():
             # Now, want to run cross validation test
 
             # Start by creating the testing arrays:
-            xTestValues, yTestValues_normalized = createtestarrays(dataSize, xVariables, yVariable, TrainIndices)
+            xTestValues, yTestValues_normalized = createtestarrays(dataSize, xVariables, y_normalized, TrainIndices)
 
             # Predict the values
             predictedYValues_normalized = regr.predict(xTestValues)
