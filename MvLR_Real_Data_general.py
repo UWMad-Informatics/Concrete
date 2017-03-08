@@ -136,6 +136,15 @@ def main():
     # being tested.
     xVariables = np.transpose(completeNumpyArray[numYvariables:])
 
+    # Normalize each of the x variables
+    # get number of columns of x variables
+    xVariablesShape = xVariables.shape
+    # index through each of the columns and find the l2 norm
+    for p in range(0, xVariablesShape[1]):
+        col_l2norm = np.sqrt(sum(xVariables[:, p]**2))
+        # index through each value of the column (thus, go through each row) and divide by the l2 norm
+        xVariables[:, p] = xVariables[:, p] / col_l2norm
+
     # Prompt for number of CV tests to run on each y variable:
     numberOfTests = int(input("How many CV tests should be done for each y variable? "))
 
@@ -174,6 +183,10 @@ def main():
         histogramOfY.set_xlabel('Y-Values')
         histogramOfY.set_ylabel('Number in Range')
 
+        # Now, want to normalize the y variable
+        y_l2norm = np.sqrt(sum(yVariable[0,:]**2))
+        y_normalized = yVariable / y_l2norm
+
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         RMSEValues = np.array([])
         # Initialize values for the best and worst RMSE
@@ -194,7 +207,7 @@ def main():
             # Randomly break the data up into training and testing. Will use input percentage for training,
             # 20% for testing.
             TrainIndices = generaterandomindices(dataSize, percentTest)
-            xTrainValues, yTrainValues = createtrainingarrays(dataSize, xVariables, yVariable, TrainIndices)
+            xTrainValues, yTrainValues = createtrainingarrays(dataSize, xVariables, y_normalized, TrainIndices)
 
             # Run a linear regression on the current y variable and the x variables:
             regr = linear_model.LinearRegression()
@@ -203,10 +216,14 @@ def main():
             # Now, want to run cross validation test
 
             # Start by creating the testing arrays:
-            xTestValues, yTestValues = createtestarrays(dataSize, xVariables, yVariable, TrainIndices)
+            xTestValues, yTestValues_normalized = createtestarrays(dataSize, xVariables, yVariable, TrainIndices)
 
             # Predict the values
-            predictedYValues = regr.predict(xTestValues)
+            predictedYValues_normalized = regr.predict(xTestValues)
+
+            # De-normalize the data
+            yTestValues = yTestValues_normalized * y_l2norm
+            predictedYValues = predictedYValues_normalized * y_l2norm
 
             # Calculate the RMSE value and add it to the current array.
             RMSE = sqrt(mean_squared_error(yTestValues, predictedYValues))
