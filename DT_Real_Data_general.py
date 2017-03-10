@@ -250,8 +250,8 @@ def main():
                 predictedyvalues_normalized = dtree.predict(xtestvalues)
 
                 # De - normalize the data
-                ytestvalues = ytestvalues_normalized * y_l2norm
-                predictedyvalues = predictedyvalues_normalized * y_l2norm
+                ytestvalues = ytestvalues_normalized*y_l2norm
+                predictedyvalues = predictedyvalues_normalized*y_l2norm
 
                 # Calculate the RMSE value and add it to the current array.
                 rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
