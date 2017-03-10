@@ -50,7 +50,14 @@ def readcsv():
     completenumpyarray = np.transpose(completearray.as_matrix())
     xvariables = np.transpose(xvariables.as_matrix())
 
-    # TODO: normalize the data?
+    # Normalize each of the x variables
+    # get number of columns of x variables
+    xVariablesShape = xvariables.shape
+    # index through each of the columns and find the l2 norm
+    for p in range(0, xVariablesShape[1]):
+        col_l2norm = np.sqrt(sum(xvariables[:, p] ** 2))
+        # index through each value of the column (thus, go through each row) and divide by the l2 norm
+        xvariables[:, p] = xvariables[:, p] / col_l2norm
 
     return completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables
 
@@ -194,6 +201,10 @@ def main():
         + " deviation was " + "{0:.4e}".format(yvariable.std()) + ".\n\n"
         output_file.write(yvariablestring)
 
+        # Now, want to normalize the y variable using the L2 norm:
+        y_l2norm = np.sqrt(sum(yvariable[0,:]**2))
+        y_normalized = yvariable / y_l2norm
+
         for f in range(0, xvariables.__len__()):
 
             figurenumber = int(str(i) + str(f))
@@ -223,7 +234,7 @@ def main():
                 # Randomly break the data up into training and testing. Will use input percentage for training,
                 # 20% for testing.
                 trainindices = generaterandomindices(datasize, percenttest)
-                xtrainvalues, ytrainvalues = createtrainingarrays(datasize, xvariable, yvariable, trainindices)
+                xtrainvalues, ytrainvalues = createtrainingarrays(datasize, xvariable, y_normalized, trainindices)
 
                 # TODO: this is the main area that would need to be reworked. I believe that the rest of the training /
                 # TODO: testing random selection should translate just fine to this.
@@ -233,10 +244,14 @@ def main():
                 # Now, want to run cross validation test
 
                 # Start by creating the testing arrays:
-                xtestvalues, ytestvalues = createtestarrays(datasize, xvariable, yvariable, trainindices)
+                xtestvalues, ytestvalues_normalized = createtestarrays(datasize, xvariable, y_normalized, trainindices)
 
                 # Predict the values
-                predictedyvalues = dtree.predict(xtestvalues)
+                predictedyvalues_normalized = dtree.predict(xtestvalues)
+
+                # De - normalize the data
+                ytestvalues = ytestvalues_normalized * y_l2norm
+                predictedyvalues = predictedyvalues_normalized * y_l2norm
 
                 # Calculate the RMSE value and add it to the current array.
                 rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
