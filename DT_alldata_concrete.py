@@ -150,9 +150,15 @@ def initializeData():
         numyvariables = 6
         yvariablenames = [variablenames[x] for x in batchAYcolumns]
         batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 29, 32, 35, 38, 41]
-        # normalize the x variables. Will normalize y variables in the main body
-        # after a histogram of the data is created.
-        xvariables = sklearn.preprocessing.normalize(completenumpyarray[:, batchAXcolumns])
+        xvariables = completenumpyarray[:, batchAXcolumns]
+        # Normalize each of the x variables
+        # get number of columns of x variables
+        xVariablesShape = xvariables.shape
+        # index through each of the columns and find the l2 norm
+        for p in range(0, xVariablesShape[1]):
+            col_l2norm = np.sqrt(sum(xvariables[:, p] ** 2))
+            # index through each value of the column (thus, go through each row) and divide by the l2 norm
+            xvariables[:, p] = xvariables[:, p] / col_l2norm
         xvariablenames = [variablenames[x] for x in batchAXcolumns]
 
     elif batch == "B":
@@ -162,11 +168,21 @@ def initializeData():
         yvariables = np.transpose(completenumpyarray[:, batchBYcolumns])
         numyvariables = 17
         yvariablenames = [variablenames[x] for x in batchBYcolumns]
-        batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 30, 33, 36, 39, 42]
+        batchBXcolumns = [22, 23, 24, 25, 26, 27, 28, 30, 33, 36, 39, 42]
+
         # normalize the x variables. Will normalize y variables in the main body
         # after a histogram of the data is created.
-        xvariables = sklearn.preprocessing.normalize(completenumpyarray[:, batchAXcolumns],axis=0)
-        xvariablenames = [variablenames[x] for x in batchAXcolumns]
+        xvariables = completenumpyarray[:, batchBXcolumns]
+        # Normalize each of the x variables
+        # get number of columns of x variables
+        xVariablesShape = xvariables.shape
+        # index through each of the columns and find the l2 norm
+        for p in range(0, xVariablesShape[1]):
+            col_l2norm = np.sqrt(sum(xvariables[:, p] ** 2))
+            # index through each value of the column (thus, go through each row) and divide by the l2 norm
+            xvariables[:, p] = xvariables[:, p] / col_l2norm
+
+        xvariablenames = [variablenames[x] for x in batchBXcolumns]
 
     else:
         print("Invalid Input.")
@@ -247,17 +263,15 @@ def createtestarrays(datasize, xvariables, yvariable, trainindices):
 
 
 # TODO: createstring
-def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable, notnormalizedmean, notnormalizedstd):
+def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable):
 
     """Creates a formatted string to print to the .txt output file"""
 
     outputstring = "-------------------------\n" \
                    "Results for " + str(currentyvariable) + ":" \
                                                             "\n-------------------------\n" \
-                    "- The mean of the yvariable was " + "{0:.4e}".format(notnormalizedmean) + " and the standard" \
-                    " deviation was " + "{0:.4e}".format(notnormalizedstd) + "\n\n" \
-                   + "- The mean of the normalized y-variable was " + "{0:.4e}".format(yvariable.mean()) + " and the " \
-                    "standard deviation was " + "{0:.4e}".format(yvariable.std()) + ".\n\n" \
+                    "- The mean of the yvariable was " + "{0:.4e}".format(yvariable.mean()) + " and the standard" \
+                    " deviation was " + "{0:.4e}".format(yvariable.std()) + "\n\n" \
                    + "- The mean of the RMSE values was " + "{0:.4e}".format(rmsevalues.mean()) + " and the standard" \
                    + " deviation was " + "{0:.4e}".format(rmsevalues.std()) + ".\n\n"
 
@@ -316,8 +330,9 @@ def main():
         histogramofy.set_xlabel('Y-Values')
         histogramofy.set_ylabel('Number in Range')
 
-        # Once the histogram is plotted, normalize the current y variable.
-        yvariable = sklearn.preprocessing.normalize(yvariable)
+        # Now, want to normalize the y variable
+        y_l2norm = np.sqrt(sum(yvariable[0, :] ** 2))
+        y_normalized = yvariable / y_l2norm
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         rmsevalues = np.array([])
@@ -333,9 +348,9 @@ def main():
         for z in range(0, numberoftests):
 
             # Randomly break the data up into training and testing. Will use input percentage for training,
-            # 20% for testing.
+            # rest for testing.
             trainindices = generaterandomindices(datasize, percenttest)
-            xtrainvalues, ytrainvalues = createtrainingarrays(datasize, xvariables, yvariable, trainindices)
+            xtrainvalues, ytrainvalues = createtrainingarrays(datasize, xvariables, y_normalized, trainindices)
 
             dtree = DecisionTreeRegressor()
             dtree.fit(xtrainvalues, ytrainvalues)
@@ -343,10 +358,14 @@ def main():
             # Now, want to run cross validation test
 
             # Start by creating the testing arrays:
-            xtestvalues, ytestvalues = createtestarrays(datasize, xvariables, yvariable, trainindices)
+            xtestvalues, ytestvalues_normalized = createtestarrays(datasize, xvariables, y_normalized, trainindices)
 
             # Predict the values
-            predictedyvalues = dtree.predict(xtestvalues)
+            predictedyvalues_normalized = dtree.predict(xtestvalues)
+
+            # De-normalize the data
+            ytestvalues = ytestvalues_normalized * y_l2norm
+            predictedyvalues = predictedyvalues_normalized * y_l2norm
 
             # Calculate the RMSE value and add it to the current array.
             rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
@@ -403,8 +422,7 @@ def main():
 
         plt.tight_layout()
 
-        outputstring = createstring(rmsevalues, bestrmse, worstrmse, currentyvariable,yvariable,notnormalizedmean,
-                                    notnormalizedstd)
+        outputstring = createstring(rmsevalues, bestrmse, worstrmse, currentyvariable,yvariable)
         output_file.write(outputstring)
 
     output_file.close()
