@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
-import sklearn as sklearn
 import random as random
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+import time
 from math import sqrt
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
 
 
 # TODO initializeData()
@@ -130,7 +131,7 @@ def initializeData():
     # Remake the dataframe to include the onehotencoded columns instead of the regular columns.
     firstHalf = allX.ix[:, :21]
     cte = allX.ix[:, 25]
-    oneHotEncodedframe = pd.concat([encodedMixP, encodedSCM, encodedFineA, encodedFineA], axis=1)
+    oneHotEncodedframe = pd.concat([encodedMixP, encodedSCM, encodedFineA, encodedCoarseA], axis=1)
     secondHalf = xValues.ix[:, 6:]
 
     completearray = pd.concat([firstHalf, cte, oneHotEncodedframe, secondHalf], axis=1)
@@ -149,16 +150,16 @@ def initializeData():
         yvariables = np.transpose(completenumpyarray[:, batchAYcolumns])
         numyvariables = 6
         yvariablenames = [variablenames[x] for x in batchAYcolumns]
-        batchAXcolumns = [22, 23, 24, 25, 26, 27, 28, 29, 32, 35, 38, 41]
+        batchAXcolumns = [23, 24, 25, 26, 28, 29, 30, 31, 32, 35, 38, 41]
         xvariables = completenumpyarray[:, batchAXcolumns]
         # Normalize each of the x variables
         # get number of columns of x variables
         xVariablesShape = xvariables.shape
         # index through each of the columns and find the l2 norm
         for p in range(0, xVariablesShape[1]):
-            col_l2norm = np.sqrt(sum(xvariables[:, p] ** 2))
-            # index through each value of the column (thus, go through each row) and divide by the l2 norm
-            xvariables[:, p] = xvariables[:, p] / col_l2norm
+            x_mean = xvariables[:, p].mean()
+            x_std = xvariables[:, p].std()
+            xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
         xvariablenames = [variablenames[x] for x in batchAXcolumns]
 
     elif batch == "B":
@@ -168,7 +169,7 @@ def initializeData():
         yvariables = np.transpose(completenumpyarray[:, batchBYcolumns])
         numyvariables = 17
         yvariablenames = [variablenames[x] for x in batchBYcolumns]
-        batchBXcolumns = [22, 23, 24, 25, 26, 27, 28, 30, 33, 36, 39, 42]
+        batchBXcolumns = [23, 24, 25, 26, 28, 29, 30, 31, 33, 36, 39, 42]
 
         # normalize the x variables. Will normalize y variables in the main body
         # after a histogram of the data is created.
@@ -188,7 +189,7 @@ def initializeData():
         print("Invalid Input.")
         exit(0)
 
-    return completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables
+    return completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables, batch
 
 
 # TODO: generaterandomindices
@@ -263,7 +264,7 @@ def createtestarrays(datasize, xvariables, yvariable, trainindices):
 
 
 # TODO: createstring
-def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable):
+def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable, r2values, bestr2, worstr2):
 
     """Creates a formatted string to print to the .txt output file"""
 
@@ -273,11 +274,17 @@ def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable):
                     "- The mean of the yvariable was " + "{0:.4e}".format(yvariable.mean()) + " and the standard" \
                     " deviation was " + "{0:.4e}".format(yvariable.std()) + "\n\n" \
                    + "- The mean of the RMSE values was " + "{0:.4e}".format(rmsevalues.mean()) + " and the standard" \
-                   + " deviation was " + "{0:.4e}".format(rmsevalues.std()) + ".\n\n"
+                   + " deviation was " + "{0:.4e}".format(rmsevalues.std()) + ".\n\n"\
+                   + "- The mean of the R^2 values was " + "{0:.4}".format(r2values.mean()) + " and the standard " \
+                        " deviation was " + "{0:.4}".format(r2values.std()) + ".\n\n" \
+                   + "- The best R^2 value was " + "{0:.4}".format(r2values.max()) + " and the worst was " \
+                   + "{0:.4}".format(r2values.min()) + ". \n\n"
 
-    best_string = "- The best RMSE was " + "{0:.4e}".format(bestrmse) + "\n\n"
+    best_string = "- The best RMSE was " + "{0:.4e}".format(bestrmse) + " with an R^2 value of "\
+                  + "{0:.4}".format(bestr2) + "\n\n"
 
-    worst_string = "- The worst RMSE was " + "{0:.4e}".format(worstrmse) + "\n\n\n"
+    worst_string = "- The worst RMSE was " + "{0:.4e}".format(worstrmse) + "with an R^2 value of "\
+                              + "{0:.4}".format(worstr2) + "\n\n\n"
 
     outputstring = outputstring + best_string + worst_string
 
@@ -287,13 +294,18 @@ def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable):
 # TODO: Runs a decision tree (regression)
 def main():
 
-    completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables = initializeData()
+    completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables, batch = initializeData()
 
     # Prompt for number of CV tests to run on each y variable:
     numberoftests = int(input("How many CV tests should be done for each y variable? "))
 
     # Prompt for the percentage of data to use for training. The remaining amount will be used for testing.
     percenttest = int(input("What percentage of data do you want to use for training? ")) / 100
+
+    # Create a string that will be added to each of the plots. This will include information such as the specific
+    #  type of test as well as the date and time it was run. This will also be added to the output .txt file.
+    dateandtime = time.strftime("%Y-%m-%d at %H:%M")
+    additionalinfo = "Multivariate Linear Regression run on " + dateandtime
 
     # Create a .txt file to store the output in:
     output_file = open("output_file.txt", 'w')
@@ -302,7 +314,7 @@ def main():
                           + "Total number of y - variables: " + str(numyvariables - 1) + "\n" \
                           + "For this run, the total number of CV tests done on each y-variable was "\
                           + str(numberoftests)\
-                          + ".\nFurthermore, " + str(percenttest*100) + "% of the data was used for training.\n" \
+                          + ".\nFurthermore, " + str(100 - percenttest*100) + "% of the data was used for testing.\n" \
                           "---------------------------------------------------------------------------\n\n\n"
     output_file.write(numberoftestsstring)
 
@@ -312,14 +324,13 @@ def main():
         # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
         datasize = np.size(yvariables[i])
         yvariable = yvariables[i].reshape(1, datasize)
-        notnormalizedmean = yvariable.mean()
-        notnormalizedstd = yvariable.std()
         currentyvariable = yvariablenames[i]
 
         # Create a figure that will store the subplots (for this particular y variable)
         figure = plt.figure(i)
         plottitle = "Results for " + str(currentyvariable)
         figure.suptitle(plottitle)
+        figure.text(0, 0, additionalinfo)
 
         # Create a histogram of the current y variable
         histogramofy = figure.add_subplot(2, 2, 1)
@@ -331,8 +342,9 @@ def main():
         histogramofy.set_ylabel('Number in Range')
 
         # Now, want to normalize the y variable
-        y_l2norm = np.sqrt(sum(yvariable[0, :] ** 2))
-        y_normalized = yvariable / y_l2norm
+        y_mean = yvariable.mean()
+        y_std = yvariable.std()
+        y_normalized = (yvariable - y_mean) / y_std
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         rmsevalues = np.array([])
@@ -343,6 +355,12 @@ def main():
         worstrmse = 0
         worstrmsedata = None
         worstrmsepredicted = None
+        # Initialize values for R^2 values that correspond to the best and worst RMSE
+        bestr2 = None
+        worstr2 = None
+
+        # Initialize an array to store the R^2 values in
+        r2values = np.array([])
 
         # Perform a specified number of CV tests on the data:
         for z in range(0, numberoftests):
@@ -364,22 +382,28 @@ def main():
             predictedyvalues_normalized = dtree.predict(xtestvalues)
 
             # De-normalize the data
-            ytestvalues = ytestvalues_normalized * y_l2norm
-            predictedyvalues = predictedyvalues_normalized * y_l2norm
+            ytestvalues = ytestvalues_normalized * y_std + y_mean
+            predictedyvalues = predictedyvalues_normalized * y_std + y_mean
 
             # Calculate the RMSE value and add it to the current array.
             rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
             rmsevalues = np.append(rmsevalues, [rmse])
+
+            # Calculate the R^2 value and add it to the array
+            r2 = r2_score(ytestvalues, predictedyvalues)
+            r2values = np.append(r2values, [r2])
 
             # Check whether or not this RMSE is the best / worst RMSE of the current y variable
             if rmse < bestrmse:
                 bestrmse = rmse
                 bestrmsedata = ytestvalues
                 bestrmsepredicted = predictedyvalues
+                bestr2 = r2
             elif rmse > worstrmse:
                 worstrmse = rmse
                 worstrmsedata = ytestvalues
                 worstrmsepredicted = predictedyvalues
+                worstr2 = r2
 
         # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
         bestrmseplot = figure.add_subplot(2, 2, 2)
@@ -422,7 +446,14 @@ def main():
 
         plt.tight_layout()
 
-        outputstring = createstring(rmsevalues, bestrmse, worstrmse, currentyvariable,yvariable)
+        # save the figure
+        titlestring = yvariablenames[i] + "_" + batch + str(100 - percenttest * 100) + ".png"
+        # make the figure more readable
+        figure.set_size_inches(14.2, 8)
+        figure.savefig(titlestring)
+
+        outputstring = createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable, r2values, bestr2,
+                                    worstr2)
         output_file.write(outputstring)
 
     output_file.close()
