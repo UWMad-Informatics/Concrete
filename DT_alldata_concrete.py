@@ -13,13 +13,13 @@ from sklearn.metrics import r2_score
 # TODO initializeData()
 def initializeData():
 
-    """ Initializes the data taken from the completeData.csv and the formattedXValues.csv. Note that these must be
+    """ Initializes the data taken from the completeRawData.csv and the formattedXValues.csv. Note that these must be
     the names of the arrays in your folder."""
 
     # Read in the CSV
-    allX = pd.read_csv('completeData.csv', keep_default_na=False)
+    allX = pd.read_csv('completeRawData.csv', keep_default_na=False)
     xValues = pd.read_csv('formattedXValues.csv')
-    filename = "completeData.csv and formattedXValues.csv"
+    filename = "completeRawData.csv and formattedXValues.csv"
 
     # Separate the CSV columns into array variables and numpy vars to store new categorical variables
     mixNum = allX['Mix Number']
@@ -179,10 +179,9 @@ def initializeData():
         xVariablesShape = xvariables.shape
         # index through each of the columns and find the l2 norm
         for p in range(0, xVariablesShape[1]):
-            col_l2norm = np.sqrt(sum(xvariables[:, p] ** 2))
-            # index through each value of the column (thus, go through each row) and divide by the l2 norm
-            xvariables[:, p] = xvariables[:, p] / col_l2norm
-
+            x_mean = xvariables[:, p].mean()
+            x_std = xvariables[:, p].std()
+            xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
         xvariablenames = [variablenames[x] for x in batchBXcolumns]
 
     else:
