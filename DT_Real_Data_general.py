@@ -55,9 +55,9 @@ def readcsv():
     xVariablesShape = xvariables.shape
     # index through each of the columns and find the l2 norm
     for p in range(0, xVariablesShape[1]):
-        col_l2norm = np.sqrt(sum(xvariables[:, p] ** 2))
-        # index through each value of the column (thus, go through each row) and divide by the l2 norm
-        xvariables[:, p] = xvariables[:, p] / col_l2norm
+        x_mean = xvariables[:, p].mean()
+        x_std = xvariables[:, p].std()
+        xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
 
     return completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables
 
@@ -201,9 +201,10 @@ def main():
         + " deviation was " + "{0:.4e}".format(yvariable.std()) + ".\n\n"
         output_file.write(yvariablestring)
 
-        # Now, want to normalize the y variable using the L2 norm:
-        y_l2norm = np.sqrt(sum(yvariable[0,:]**2))
-        y_normalized = yvariable / y_l2norm
+        # Now, want to normalize the y variable:
+        y_mean = yvariable.mean()
+        y_std = yvariable.std()
+        y_normalized = (yvariable - y_mean) / y_std
 
         for f in range(0, xvariables.__len__()):
 
@@ -250,8 +251,8 @@ def main():
                 predictedyvalues_normalized = dtree.predict(xtestvalues)
 
                 # De - normalize the data
-                ytestvalues = ytestvalues_normalized*y_l2norm
-                predictedyvalues = predictedyvalues_normalized*y_l2norm
+                ytestvalues = ytestvalues_normalized * y_std + y_mean
+                predictedyvalues = predictedyvalues_normalized * y_std + y_mean
 
                 # Calculate the RMSE value and add it to the current array.
                 rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
