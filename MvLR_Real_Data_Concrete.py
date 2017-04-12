@@ -17,7 +17,7 @@ def initializeData():
     the names of the arrays in your folder."""
 
     # Read in the CSV
-    allX = pd.read_csv('completeData.csv', keep_default_na=False)
+    allX = pd.read_csv('completeRawData.csv', keep_default_na=False)
     xValues = pd.read_csv('formattedXValues.csv')
     filename = "completeData.csv and formattedXValues.csv"
 
@@ -129,11 +129,10 @@ def initializeData():
         inplace=True)
 
     # Remake the dataframe to include the onehotencoded columns instead of the regular columns.
-    firstHalf = allX.ix[:, :21]
-    cte = allX.ix[:, 25]
+    firstHalf = allX.ix[:, :22]
     oneHotEncodedframe = pd.concat([encodedMixP, encodedSCM, encodedFineA, encodedCoarseA], axis=1)
     secondHalf = xValues.ix[:, 6:]
-    completearray = pd.concat([firstHalf, cte, oneHotEncodedframe, secondHalf], axis=1)
+    completearray = pd.concat([firstHalf, oneHotEncodedframe, secondHalf], axis=1)
     variablenames = list(completearray.columns.values)
     # convert to numpy array
     completenumpyarray = completearray.as_matrix()
@@ -312,6 +311,13 @@ def main():
     # Prompt for the percentage of data to use for training. The remaining amount will be used for testing.
     percentTest = int(input("What percentage of data do you want to use for training? ")) / 100
 
+    # Prompt whether or not creating plots is desired
+    makeplotsquestion = input("Would you like to create and save plots for this run? (True / False)")
+    if makeplotsquestion == "True":
+        makeplots = True
+    elif makeplotsquestion == "False":
+        makeplots = False
+
     # Create a string that will be added to each of the plots. This will include information such as the specific
     #  type of test as well as the date and time it was run. This will also be added to the output .txt file.
     dateandtime = time.strftime("%Y-%m-%d at %H:%M")
@@ -328,6 +334,12 @@ def main():
                           "---------------------------------------------------------------------------\n\n\n"
     output_file.write(numberOfTestsstring)
 
+    # Create two arrays. These will be arrays of arrays. One will store all of the RMSE data (normalized by std) and the
+    # other will contain all of the r^2 data. These will then be used to create box and whisker plots of all the data
+    # side by side for comparison of fit.
+    allrmsedata = list()
+    allrsquareddata = list()
+
     # For each of the Y variables, want to run a linear regression:
     for i in range(1, numyvariables):
 
@@ -336,22 +348,16 @@ def main():
         yVariable = yvariables[i].reshape(1, dataSize)
         currentYVariable = yvariablenames[i]
 
-        # Create a figure that will store the subplots (for this particular y variable)
-        figure = plt.figure(i)
-        plotTitleString = "Results for " + str(currentYVariable)
-        figure.suptitle(plotTitleString)
-        figure.text(0, 0, additionalinfo)
-
         # Create a histogram of the current y variable
-        histogramOfY = figure.add_subplot(2, 2, 1)
-        histogramOfY.locator_params(axis='x',nbins=5)
-        histogramOfY.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.hist(np.transpose(yVariable),histtype="bar")
-        histogramOfY.set_title('Histogram of Y-Values')
-        histogramOfY.set_xlabel('Y-Values')
-        histogramOfY.set_ylabel('Number in Range')
+        # histogramOfY = figure.add_subplot(2, 2, 1)
+        # histogramOfY.locator_params(axis='x',nbins=5)
+        # histogramOfY.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+        # plt.hist(np.transpose(yVariable),histtype="bar")
+        # histogramOfY.set_title('Histogram of Y-Values')
+        # histogramOfY.set_xlabel('Y-Values')
+        # histogramOfY.set_ylabel('Number in Range')
 
-        # Now, want to normalize the y variable
+        # Want to normalize the y variable
         y_mean = yVariable.mean()
         y_std = yVariable.std()
         y_normalized = (yVariable - y_mean) / y_std
@@ -424,57 +430,105 @@ def main():
                 worstIntercept = regr.intercept_
                 worstr2 = r2
 
-        # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
-        bestRMSEplot = figure.add_subplot(2,2,2)
-        bestRMSEplot.locator_params(axis='x',nbins=5)
-        bestRMSEplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        bestRMSEplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.scatter(bestRMSEData, bestRMSEPredicted, marker="o", color="b")
-        bestRMSEplot.set_title('Actual vs. Predicted Values for Best RMSE')
-        bestRMSEplot.set_xlabel('Actual Values')
-        bestRMSEplot.set_ylabel('Predicted Values')
-        ymin = np.amin(bestRMSEPredicted) - np.std(bestRMSEPredicted)
-        ymax = np.amax(bestRMSEPredicted) + np.std(bestRMSEPredicted)
-        xmin = np.amin(bestRMSEData) - np.std(bestRMSEData)
-        xmax = np.amax(bestRMSEData) + np.std(bestRMSEData)
-        bestRMSEplot.set_ylim([ymin,ymax])
-        bestRMSEplot.set_xlim([xmin,xmax])
+        # Depending on whether or not makeplots is true or false
+        if makeplots is True:
+            # Create a figure that will store the subplots (for this particular y variable)
+            figure = plt.figure(i)
+            plotTitleString = "Results for " + str(currentYVariable)
+            figure.suptitle(plotTitleString)
+            figure.text(0, 0, additionalinfo)
 
-        worstRMSEplot = figure.add_subplot(2,2,3)
-        worstRMSEplot.locator_params(axis='x',nbins=5)
-        worstRMSEplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        worstRMSEplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.scatter(worstRMSEData, worstRMSEPredicted, marker="o", color="b")
-        worstRMSEplot.set_title('Actual vs. Predicted Values for Worst RMSE')
-        worstRMSEplot.set_xlabel('Actual Values')
-        worstRMSEplot.set_ylabel('Predicted Values')
-        ymin = np.amin(worstRMSEPredicted) - np.std(worstRMSEPredicted)
-        ymax = np.amax(worstRMSEPredicted) + np.std(worstRMSEPredicted)
-        xmin = np.amin(worstRMSEData) - np.std(worstRMSEData)
-        xmax = np.amax(worstRMSEData) + np.std(worstRMSEData)
-        worstRMSEplot.set_ylim([ymin, ymax])
-        worstRMSEplot.set_xlim([xmin, xmax])
+            # add the plots for best, worst fits as well as a plot of the RMSE and r^2 values from the tests.
+            rsquaredhist = figure.add_subplot(2, 2, 1)
+            rsquaredhist.locator_params(axis='x', nbins=10)
+            rsquaredhist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2f'))
+            plt.hist(r2values, histtype="bar")
+            rsquaredhist.set_title('Histogram of r^2 Values')
+            rsquaredhist.set_xlabel('r^2 Value')
+            rsquaredhist.set_ylabel('Number in Range')
 
-        RMSEhist = figure.add_subplot(2,2,4)
-        RMSEhist.locator_params(axis='x',nbins=5)
-        RMSEhist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.hist(RMSEValues,histtype="bar")
-        RMSEhist.set_title('Histogram of RMSE Values')
-        RMSEhist.set_xlabel('RMSE Value')
-        RMSEhist.set_ylabel('Number in Range')
+            bestRMSEplot = figure.add_subplot(2,2,2)
+            bestRMSEplot.locator_params(axis='x',nbins=5)
+            bestRMSEplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+            bestRMSEplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+            plt.scatter(bestRMSEData, bestRMSEPredicted, marker="o", color="b")
+            bestRMSEplot.set_title('Actual vs. Predicted Values for Best RMSE')
+            bestRMSEplot.set_xlabel('Actual Values')
+            bestRMSEplot.set_ylabel('Predicted Values')
+            ymin = np.amin(bestRMSEPredicted) - np.std(bestRMSEPredicted)
+            ymax = np.amax(bestRMSEPredicted) + np.std(bestRMSEPredicted)
+            xmin = np.amin(bestRMSEData) - np.std(bestRMSEData)
+            xmax = np.amax(bestRMSEData) + np.std(bestRMSEData)
+            bestRMSEplot.set_ylim([ymin,ymax])
+            bestRMSEplot.set_xlim([xmin,xmax])
 
-        plt.tight_layout()
+            worstRMSEplot = figure.add_subplot(2,2,3)
+            worstRMSEplot.locator_params(axis='x',nbins=5)
+            worstRMSEplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+            worstRMSEplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+            plt.scatter(worstRMSEData, worstRMSEPredicted, marker="o", color="b")
+            worstRMSEplot.set_title('Actual vs. Predicted Values for Worst RMSE')
+            worstRMSEplot.set_xlabel('Actual Values')
+            worstRMSEplot.set_ylabel('Predicted Values')
+            ymin = np.amin(worstRMSEPredicted) - np.std(worstRMSEPredicted)
+            ymax = np.amax(worstRMSEPredicted) + np.std(worstRMSEPredicted)
+            xmin = np.amin(worstRMSEData) - np.std(worstRMSEData)
+            xmax = np.amax(worstRMSEData) + np.std(worstRMSEData)
+            worstRMSEplot.set_ylim([ymin, ymax])
+            worstRMSEplot.set_xlim([xmin, xmax])
 
-        # save the figure
-        titlestring = yvariablenames[i] + "_" + batch + str(100 - percentTest*100) + ".png"
-        # make the figure more readable
-        figure.set_size_inches(14.2, 8)
-        figure.savefig(titlestring)
+            RMSEhist = figure.add_subplot(2,2,4)
+            RMSEhist.locator_params(axis='x',nbins=5)
+            RMSEhist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+            plt.hist(RMSEValues,histtype="bar")
+            RMSEhist.set_title('Histogram of RMSE Values')
+            RMSEhist.set_xlabel('RMSE Value')
+            RMSEhist.set_ylabel('Number in Range')
+
+            plt.tight_layout()
+
+            # save the figure
+            titlestring = yvariablenames[i] + "_" + batch + str(100 - percentTest*100) + ".png"
+            # make the figure more readable
+            figure.set_size_inches(14.2, 8)
+            figure.savefig(titlestring)
+
+        # Add the normalized RMSE and r^2 values to the complete arrays
+        normalizedrmsedata = RMSEValues / yVariable.std()
+        normalizedrmsedata = normalizedrmsedata.reshape(1, np.size(normalizedrmsedata))
+        allrmsedata.append(normalizedrmsedata)
+        r2values = r2values.reshape(1, np.size(r2values))
+        allrsquareddata.append(r2values)
 
         # Store the information from the run in an output .txt file
         outputstring = createstring(yVariable, RMSEValues, bestRMSE, bestCoef, bestIntercept, worstRMSE, worstCoef,
                                     worstIntercept, currentYVariable, xvariablenames, r2values, bestr2, worstr2)
         output_file.write(outputstring)
+
+    # If make plots is true, create the side-by-side plots
+    if makeplots is True:
+
+        # RMSE plot
+        rmseboxplot = plt.figure()
+        rmsebp = rmseboxplot.add_subplot(1, 1, 1)
+        rmsebp.boxplot(allrmsedata)
+        rmsebp.set_title('Normalized RMSE Data for Each Y Variable')
+        x = range(1,len(yvariablenames))
+        plt.xticks(x, yvariablenames[1:len(yvariablenames)], rotation='vertical')
+        rmsebp.set_xlabel('Y Variables')
+        rmsebp.set_ylabel('RMSE / std')
+        plt.tight_layout()
+
+        # R^2 plot
+        rsquaredboxplot = plt.figure()
+        rsquaredbp = rsquaredboxplot.add_subplot(1, 1, 1)
+        rsquaredbp.boxplot(allrsquareddata)
+        rsquaredbp.set_title('R^2 Values for Each Y Variable')
+        x = range(1,len(yvariablenames))
+        plt.xticks(x, yvariablenames[1:len(yvariablenames)], rotation='vertical')
+        rsquaredbp.set_xlabel('Y Variables')
+        rsquaredbp.set_ylabel('R^2 Value')
+        plt.tight_layout()
 
     output_file.close()
     plt.show()
