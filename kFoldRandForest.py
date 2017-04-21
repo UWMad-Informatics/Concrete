@@ -139,7 +139,6 @@ def initializeData():
     # convert to numpy array
     completenumpyarray = completearray.as_matrix()
 
-    #####
     # Now, Ask whether or not to run decision trees on batch A data or batch B
     batch = input("which batch to run tests on (A or B)? ")
 
@@ -216,7 +215,7 @@ def createstring(rmsevalues, bestrmse, worstrmse, avg_rmse, currentyvariable, yv
                               + "{0:.4}".format(worstr2) + "\n\n\n"
 
     # CHANGE: added avg_string
-    avg_string = "- The mean RMSE was " + avg_rmse
+    avg_string = "- The mean RMSE was " + str(avg_rmse)
 
     outputstring = outputstring + best_string + worst_string + avg_string
 
@@ -228,8 +227,15 @@ def main():
 
     completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables, batch = initializeData()
 
+    # Prompt whether or not creating plots is desired
+    makeplotsquestion = input("Would you like to create and save plots for this run? (True / False)")
+    if makeplotsquestion == "True":
+        makeplots = True
+    elif makeplotsquestion == "False":
+        makeplots = False
+
     # Prompt for number of CV tests to run on each y variable:
-    # CHANGE: Change from # CV used to # folds used for CV
+    # CHANGE: Change from # CV tests to # folds used for CV
     num_folds = int(input("How many folds should be used for cross validation? "))
 
     # Create a string that will be added to each of the plots. This will include information such as the specific
@@ -238,7 +244,7 @@ def main():
     additionalinfo = "Run on " + dateandtime
 
     # Create a .txt file to store the output in:
-    # CHANGE: Output file content changed
+    # CHANGE: Output file content changed for number of folds
     output_file = open("output_file.txt", 'w')
     numberoftestsstring = "\n---------------------------------------------------------------------------\n" \
                           "Name of input file: " + filename + "\n" \
@@ -252,28 +258,14 @@ def main():
 
         # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
         datasize = np.size(yvariables[i])
-        yvariable = yvariables[i].reshape(1, datasize)
+        yvariable = yvariables[i]
         currentyvariable = yvariablenames[i]
-
-        # Create a figure that will store the subplots (for this particular y variable)
-        figure = plt.figure(i)
-        plottitle = "Results for " + str(currentyvariable) + " Using 100 Trees per Forest"
-        figure.suptitle(plottitle)
-        figure.text(0, 0, additionalinfo)
-
-        # Create a histogram of the current y variable
-        histogramofy = figure.add_subplot(2, 2, 1)
-        histogramofy.locator_params(axis='x', nbins=5)
-        histogramofy.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.hist(np.transpose(yvariable), histtype="bar")
-        histogramofy.set_title('Histogram of Y-Values')
-        histogramofy.set_xlabel('Y-Values')
-        histogramofy.set_ylabel('Number in Range')
 
         # Now, want to normalize the y variable
         y_mean = yvariable.mean()
         y_std = yvariable.std()
         y_normalized = (yvariable - y_mean) / y_std
+        y_normalized = np.reshape(y_normalized, newshape=(len(y_normalized), 1))
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         rmsevalues = np.array([])
@@ -292,13 +284,17 @@ def main():
         r2values = np.array([])
 
         # Break the data into folds to be used for k-fold CV.
-        rows_add = int(num_folds / len(xvariables[0]))
+        rows_add = int(len(xvariables)/num_folds)
+        print("Rows add: " + str(rows_add))
         # Create train and test to hold data later
-        xtrainvalues = np.ndarray(shape=(len(xvariables[0]) - rows_add, len(xvariables[:, 0])))
-        ytrainvalues = np.ndarray(shape=(len(y_normalized[0]) - rows_add, len(y_normalized[:, 0])))
+        print("Y Normalized Shape: " + str(y_normalized.shape))
+        xtrainvalues = np.ndarray(shape=(len(xvariables) - rows_add, len(xvariables[0, :])))
+        ytrainvalues = np.ndarray(shape=(rows_add*(num_folds - 1), 1))
+        print("X Train shape, expected: " + str(xtrainvalues.shape))
+        print("Y Train Shape, Expected: " + str(ytrainvalues.shape))
 
         xtestvalues = np.ndarray(shape=(rows_add, len(xvariables[:, 0])))
-        ytestvalues_normalized = np.ndarray(shape=(rows_add, len(y_normalized[:, 0])))
+        ytestvalues_normalized = np.ndarray(shape=(rows_add, len(y_normalized)))
 
         # CHANGE: Create the model here so we use the same model on all sets for a given x
         rand_forest = RandomForestRegressor()
@@ -313,30 +309,20 @@ def main():
             # Edge case: last fold. If not at last fold, grab all rows needed. Otherwise, grab i to end of the rows.
             if z != z - 1:
                 xtestvalues = xvariables[z:z + rows_add, :]
-                ytestvalues_normalized = y_normalized[z:z + rows_add, :]
+                ytestvalues_normalized = y_normalized[z:z + rows_add]
             else:
                 xtestvalues = xvariables[z:, :]
                 ytestvalues_normalized = y_normalized[z:z + rows_add, :]
 
             # Edge case: first fold
             if z != 0:
-                xtrainvalues = xvariables[:z, :]
-                xtrainvalues = np.concatenate((xtrainvalues, xvariables[(z + 1):, :]))
-                ytrainvalues = yvariables[:z, :]
-                ytrainvalues = np.concatenate((ytrainvalues, yvariables[(z + 1):, :]))
+                xtrainvalues = xvariables[:z*rows_add, :]
+                xtrainvalues = np.concatenate((xtrainvalues, xvariables[(z*rows_add) + rows_add:, :]))
+                ytrainvalues = y_normalized[:z*rows_add, :]
+                ytrainvalues = np.concatenate((ytrainvalues, y_normalized[(z*rows_add) + rows_add:, :]))
             else:
-                xtrainvalues = xvariables[z:, :]
-                ytrainvalues = ytrainvalues[z:, :]
-
-            # CHANGE: Keeps the console from printing the stupid 1D array instead of column crap.
-            #ytrainvalues = ytrainvalues[0]
-            #ytestvalues_normalized = ytestvalues_normalized[:, None]
-
-            print(xtrainvalues.shape)
-            print("Y")
-            print(ytestvalues_normalized)
-
-            cont = input("Continue? ")
+                xtrainvalues = xvariables[rows_add:, :]
+                ytrainvalues = y_normalized[rows_add:, :]
 
             # Fit the model
             rand_forest.fit(xtrainvalues, ytrainvalues)
@@ -369,53 +355,70 @@ def main():
                 worstrmsepredicted = predictedyvalues
                 worstr2 = r2
 
-        # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
-        bestrmseplot = figure.add_subplot(2, 2, 2)
-        bestrmseplot.locator_params(axis='x', nbins=5)
-        bestrmseplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        bestrmseplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.scatter(bestrmsedata, bestrmsepredicted, marker="o", color="b")
-        bestrmseplot.set_title('Actual vs. Predicted Values for Best RMSE')
-        bestrmseplot.set_xlabel('Actual Values')
-        bestrmseplot.set_ylabel('Predicted Values')
-        ymin = np.amin(bestrmsepredicted) - np.std(bestrmsepredicted)
-        ymax = np.amax(bestrmsepredicted) + np.std(bestrmsepredicted)
-        xmin = np.amin(bestrmsedata) - np.std(bestrmsedata)
-        xmax = np.amax(bestrmsedata) + np.std(bestrmsedata)
-        bestrmseplot.set_ylim([ymin, ymax])
-        bestrmseplot.set_xlim([xmin, xmax])
+                # If we want tomake plots, create a figure that will store the subplots (for this particular y variable)
+                if makeplots is True:
+                    figure = plt.figure(i)
+                    plottitle = "Results for " + str(currentyvariable) + " Using 10 Fold CV"
+                    figure.suptitle(plottitle)
+                    figure.text(0, 0, additionalinfo)
 
-        worstrmseplot = figure.add_subplot(2, 2, 3)
-        worstrmseplot.locator_params(axis='x', nbins=5)
-        worstrmseplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        worstrmseplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.scatter(worstrmsedata, worstrmsepredicted, marker="o", color="b")
-        worstrmseplot.set_title('Actual vs. Predicted Values for Worst RMSE')
-        worstrmseplot.set_xlabel('Actual Values')
-        worstrmseplot.set_ylabel('Predicted Values')
-        ymin = np.amin(worstrmsepredicted) - np.std(worstrmsepredicted)
-        ymax = np.amax(worstrmsepredicted) + np.std(worstrmsepredicted)
-        xmin = np.amin(worstrmsedata) - np.std(worstrmsedata)
-        xmax = np.amax(worstrmsedata) + np.std(worstrmsedata)
-        worstrmseplot.set_ylim([ymin, ymax])
-        worstrmseplot.set_xlim([xmin, xmax])
+                    # add the plots for best, worst fits as well as a plot of the RMSE and r^2 values from the tests.
+                    rsquaredhist = figure.add_subplot(2, 2, 1)
+                    rsquaredhist.locator_params(axis='x', nbins=10)
+                    rsquaredhist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2f'))
+                    plt.hist(r2values, histtype="bar")
+                    rsquaredhist.set_title('Histogram of r^2 Values')
+                    rsquaredhist.set_xlabel('r^2 Value')
+                    rsquaredhist.set_ylabel('Number in Range')
 
-        rmsehist = figure.add_subplot(2, 2, 4)
-        rmsehist.locator_params(axis='x', nbins=5)
-        rmsehist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        plt.hist(rmsevalues, histtype="bar")
-        rmsehist.set_title('Histogram of RMSE Values')
-        rmsehist.set_xlabel('RMSE Value')
-        rmsehist.set_ylabel('Number in Range')
+                    # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
+                    bestrmseplot = figure.add_subplot(2, 2, 2)
+                    bestrmseplot.locator_params(axis='x', nbins=5)
+                    bestrmseplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+                    bestrmseplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+                    plt.scatter(bestrmsedata, bestrmsepredicted, marker="o", color="b")
+                    bestrmseplot.set_title('Actual vs. Predicted Values for Best RMSE')
+                    bestrmseplot.set_xlabel('Actual Values')
+                    bestrmseplot.set_ylabel('Predicted Values')
+                    ymin = np.amin(bestrmsepredicted) - np.std(bestrmsepredicted)
+                    ymax = np.amax(bestrmsepredicted) + np.std(bestrmsepredicted)
+                    xmin = np.amin(bestrmsedata) - np.std(bestrmsedata)
+                    xmax = np.amax(bestrmsedata) + np.std(bestrmsedata)
+                    bestrmseplot.set_ylim([ymin, ymax])
+                    bestrmseplot.set_xlim([xmin, xmax])
 
-        plt.tight_layout()
+                    worstrmseplot = figure.add_subplot(2, 2, 3)
+                    worstrmseplot.locator_params(axis='x', nbins=5)
+                    worstrmseplot.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+                    worstrmseplot.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+                    plt.scatter(worstrmsedata, worstrmsepredicted, marker="o", color="b")
+                    worstrmseplot.set_title('Actual vs. Predicted Values for Worst RMSE')
+                    worstrmseplot.set_xlabel('Actual Values')
+                    worstrmseplot.set_ylabel('Predicted Values')
+                    ymin = np.amin(worstrmsepredicted) - np.std(worstrmsepredicted)
+                    ymax = np.amax(worstrmsepredicted) + np.std(worstrmsepredicted)
+                    xmin = np.amin(worstrmsedata) - np.std(worstrmsedata)
+                    xmax = np.amax(worstrmsedata) + np.std(worstrmsedata)
+                    worstrmseplot.set_ylim([ymin, ymax])
+                    worstrmseplot.set_xlim([xmin, xmax])
 
-        # save the figure
-        # CHANGE: changed plot title to be kFold.
-        titlestring = yvariablenames[i] + "_" + batch + "kFold.png"
-        # make the figure more readable
-        figure.set_size_inches(14.2, 8)
-        figure.savefig(titlestring)
+                    rmsehist = figure.add_subplot(2, 2, 4)
+                    rmsehist.locator_params(axis='x', nbins=5)
+                    rmsehist.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+                    plt.hist(rmsevalues, histtype="bar")
+                    rmsehist.set_title('Histogram of RMSE Values')
+                    rmsehist.set_xlabel('RMSE Value')
+                    rmsehist.set_ylabel('Number in Range')
+
+                    plt.tight_layout()
+
+                    # save the figure
+                    # CHANGE: changed plot title to be kFold.
+                    titlestring = yvariablenames[i] + "_" + batch + "_kFold.png"
+                    # make the figure more readable
+                    figure.set_size_inches(14.2, 8)
+                    # CHANGE: Save plots to a folder in my computer
+                    figure.savefig("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\" + titlestring)
 
         # CHANGE: Calculate the average RMSE for this run and added them as input param for createstring method
         avg_rmse = avg_rmse_sum / num_folds
