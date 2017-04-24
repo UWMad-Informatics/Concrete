@@ -352,7 +352,7 @@ def main():
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         RMSEValues = np.array([])
-        # Initialize values for the best and worst RMSE
+        # Initialize values for the best and worst RMSE values
         bestRMSE = 1000000
         bestRMSEData = None
         bestRMSEPredicted = None
