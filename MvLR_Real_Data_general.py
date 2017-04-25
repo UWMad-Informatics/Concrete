@@ -141,9 +141,10 @@ def main():
     xVariablesShape = xVariables.shape
     # index through each of the columns and find the l2 norm
     for p in range(0, xVariablesShape[1]):
-        col_l2norm = np.sqrt(sum(xVariables[:, p]**2))
+        x_mean = xVariables[:, p].mean()
+        x_std = xVariables[:, p].std()
         # index through each value of the column (thus, go through each row) and divide by the l2 norm
-        xVariables[:, p] = xVariables[:, p] / col_l2norm
+        xVariables[:, p] = (xVariables[:, p] - x_mean) / x_std
 
     # Prompt for number of CV tests to run on each y variable:
     numberOfTests = int(input("How many CV tests should be done for each y variable? "))
@@ -184,8 +185,9 @@ def main():
         histogramOfY.set_ylabel('Number in Range')
 
         # Now, want to normalize the y variable
-        y_l2norm = np.sqrt(sum(yVariable[0,:]**2))
-        y_normalized = yVariable / y_l2norm
+        y_mean = yVariable.mean()
+        y_std = yVariable.std()
+        y_normalized = (yVariable - y_mean) / y_std
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         RMSEValues = np.array([])
@@ -222,8 +224,8 @@ def main():
             predictedYValues_normalized = regr.predict(xTestValues)
 
             # De-normalize the data
-            yTestValues = yTestValues_normalized * y_l2norm
-            predictedYValues = predictedYValues_normalized * y_l2norm
+            yTestValues = yTestValues_normalized * y_std + y_mean
+            predictedYValues = predictedYValues_normalized * y_std + y_mean
 
             # Calculate the RMSE value and add it to the current array.
             RMSE = sqrt(mean_squared_error(yTestValues, predictedYValues))
