@@ -190,14 +190,14 @@ def initializeData():
 
 
 # TODO: createstring
-# CHANGE: added avg_rmse as a parameter.
-def createstring(rmsevalues, bestrmse, worstrmse, avg_rmse, currentyvariable, yvariable, r2values, bestr2, worstr2,
-                 num_trees):
+def createstring(rmsevalues, bestrmse, worstrmse, currentyvariable, yvariable, r2values, bestr2, worstr2,
+                 num_trees, tree_depth):
 
     """Creates a formatted string to print to the .txt output file"""
 
     outputstring = "-------------------------------------------------------\n" \
-                   "Results for " + str(currentyvariable) + " using " + str(num_trees) + " Trees per Forest" \
+                   "Results for " + str(currentyvariable) + " using " + str(num_trees) + " Trees per Forest and\n" \
+                   + "a max tree depth of " + str(tree_depth) \
                    + "\n-------------------------------------------------------\n" \
                    + "- The mean of the yvariable was " + str(yvariable.mean()) + " and the standard" \
                    + " deviation was " + str(yvariable.std()) + "\n\n" \
@@ -214,15 +214,10 @@ def createstring(rmsevalues, bestrmse, worstrmse, avg_rmse, currentyvariable, yv
     worst_string = "- The worst RMSE was " + str(worstrmse) + "with an R^2 value of "\
                    + str(worstr2) + "\n\n"
 
-    # CHANGE: added avg_string
-    avg_string = "- The mean RMSE was " + str(avg_rmse) + "\n\n\n"
-
-    outputstring = outputstring + best_string + worst_string + avg_string
-
+    outputstring = outputstring + best_string + worst_string
     return outputstring
 
 
-# TODO: Main Method
 def main():
 
     completenumpyarray, xvariables, filename, xvariablenames, yvariablename, yvariable, batch = initializeData()
@@ -245,7 +240,7 @@ def main():
 
     numberoftestsstring = "\n---------------------------------------------------------------------------\n" \
                           "Name of input file: " + filename + "\n" \
-                          "\n For this run, " + str(kf.get_n_splits()) + "-fold CV was used. \n"\
+                          "\nFor this run, " + str(kf.get_n_splits()) + "-fold CV was used. \n"\
                           + "---------------------------------------------------------------------------\n\n\n"
     output_file.write(numberoftestsstring)
 
@@ -268,118 +263,131 @@ def main():
     worstrmse = 0
     worstrmsedata = np.ones(shape=1)
     worstrmsepredicted = None
-    avg_rmse_sum = 0
     # Initialize values for R^2 values that correspond to the best and worst RMSE
     bestr2 = None
     worstr2 = None
 
-    # Create the model here so we use the same model on all sets for a given x
-    for param_val in (True, False):
-        num_trees = 90
-        rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=param_val)
 
-        # Perform a specified number of CV tests on the data:
-        for train_index, test_index in kf.split(yvariable):
-            xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
-            ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
+    rand_forest = RandomForestRegressor(n_estimators=90, criterion="mae", warm_start=True, bootstrap=True)
 
-            # Fit the model
-            rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
-            # Predict the y values
-            predictedyvalues_normalized = rand_forest.predict(xtestvalues)
+    # Perform a specified number of CV tests on the data:
+    for train_index, test_index in kf.split(yvariable):
+        xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
+        ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
 
-            # De-normalize the data
-            ytestvalues = (ytestvalues_normalized * y_std) + y_mean
-            predictedyvalues = (predictedyvalues_normalized * y_std) + y_mean
+        # Fit the model
+        rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
+        # Predict the y values
+        predictedyvalues_normalized = rand_forest.predict(xtestvalues)
 
-            # Calculate the RMSE value and add it to the current array.
-            rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
-            rmsevalues = np.append(rmsevalues, [rmse])
+        # De-normalize the data
+        ytestvalues = (ytestvalues_normalized * y_std) + y_mean
+        predictedyvalues = (predictedyvalues_normalized * y_std) + y_mean
 
-            # Calculate the R^2 value and add it to the array
-            r2 = r2_score(ytestvalues, predictedyvalues)
-            r2values = np.append(r2values, [r2])
+        # Calculate the RMSE value and add it to the current array.
+        rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
+        rmsevalues = np.append(rmsevalues, [rmse])
 
-            # Check whether or not this RMSE is the best / worst RMSE of the current y variable
-            if rmse < bestrmse:
-                bestrmse = rmse
-                bestrmsedata = ytestvalues
-                bestrmsepredicted = predictedyvalues
-                bestr2 = r2
-            elif rmse > worstrmse:
-                worstrmse = rmse
-                worstrmsedata = ytestvalues
-                worstrmsepredicted = predictedyvalues
-                worstr2 = r2
+        # Calculate the R^2 value and add it to the array
+        r2 = r2_score(ytestvalues, predictedyvalues)
+        r2values = np.append(r2values, [r2])
 
-        # If we want to make plots, create a figure that will store the subplots
-        if make_plots:
-            figure = plt.figure()
-            plottitle = "Results for " + str(yvariablename) + " Using " + str(kf.get_n_splits()) + " Fold CV"
-            figure.suptitle(plottitle, fontsize=22)
-            figure.text(0, 0, additionalinfo)
+        # Check whether or not this RMSE is the best / worst RMSE of the current y variable
+        if rmse < bestrmse:
+            bestrmse = rmse
+            bestrmsedata = ytestvalues
+            bestrmsepredicted = predictedyvalues
+            bestr2 = r2
+        elif rmse > worstrmse:
+            worstrmse = rmse
+            worstrmsedata = ytestvalues
+            worstrmsepredicted = predictedyvalues
+            worstr2 = r2
 
-            # add the plots for best, worst fits as well as a plot of the RMSE and r^2 values from the tests.
-            rsquaredhist = figure.add_subplot(2, 2, 1)
-            rsquaredhist.locator_params(axis='x', nbins=10)
-            plt.hist(r2values, histtype="bar")
-            rsquaredhist.set_title('Histogram of r^2 Values', fontsize=16)
-            rsquaredhist.set_xlabel('r^2 Value', fontsize=16)
-            rsquaredhist.set_ylabel('Number in Range', fontsize=16)
+    # If we want to make plots, create a figure that will store the subplots
+    if make_plots:
+        figure = plt.figure()
+        plottitle = "Results for " + str(yvariablename) + " Using " + str(kf.get_n_splits()) + " Fold CV"
+        figure.suptitle(plottitle, fontsize=16)
+        figure.text(0, 0, additionalinfo)
 
-            # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
-            bestrmseplot = figure.add_subplot(2, 2, 2)
-            bestrmseplot.locator_params(axis='x', nbins=5)
-            plt.scatter(bestrmsedata, bestrmsepredicted, marker="o", color="b")
-            bestrmseplot.set_title('Actual vs. Predicted Values for Best RMSE', fontsize=16)
-            bestrmseplot.set_xlabel('Actual Values', fontsize=16)
-            bestrmseplot.set_ylabel('Predicted Values', fontsize=16)
-            ymin = np.amin(bestrmsepredicted) - np.std(bestrmsepredicted)
-            ymax = np.amax(bestrmsepredicted) + np.std(bestrmsepredicted)
-            xmin = np.amin(bestrmsedata) - np.std(bestrmsedata)
-            xmax = np.amax(bestrmsedata) + np.std(bestrmsedata)
-            bestrmseplot.set_ylim([ymin, ymax])
-            bestrmseplot.set_xlim([xmin, xmax])
+        # add the plots for best, worst fits as well as a plot of the RMSE and r^2 values from the tests.
+        rsquaredhist = figure.add_subplot(2, 2, 1)
+        rsquaredhist.locator_params(axis='x', nbins=10)
+        plt.hist(r2values, histtype="bar")
+        rsquaredhist.set_title('Histogram of r^2 Values', fontsize=16)
+        rsquaredhist.set_xlabel('r^2 Value', fontsize=16)
+        rsquaredhist.set_ylabel('Number in Range', fontsize=16)
 
-            worstrmseplot = figure.add_subplot(2, 2, 3)
-            worstrmseplot.locator_params(axis='x', nbins=5)
-            plt.scatter(worstrmsedata, worstrmsepredicted, marker="o", color="b")
-            worstrmseplot.set_title('Actual vs. Predicted Values for Worst RMSE', fontsize=16)
-            worstrmseplot.set_xlabel('Actual Values', fontsize=16)
-            worstrmseplot.set_ylabel('Predicted Values', fontsize=16)
-            ymin = np.amin(worstrmsepredicted) - np.std(worstrmsepredicted)
-            ymax = np.amax(worstrmsepredicted) + np.std(worstrmsepredicted)
-            xmin = np.amin(worstrmsedata) - np.std(worstrmsedata)
-            xmax = np.amax(worstrmsedata) + np.std(worstrmsedata)
-            worstrmseplot.set_ylim([ymin, ymax])
-            worstrmseplot.set_xlim([xmin, xmax])
+        # add the plots for best, worst fits as well as a plot of the RMSE values from the tests.
+        bestrmseplot = figure.add_subplot(2, 2, 2)
+        bestrmseplot.locator_params(axis='x', nbins=5)
+        plt.scatter(bestrmsedata, bestrmsepredicted, marker="o", color="b")
+        bestrmseplot.set_title('Actual vs. Predicted Values for Best RMSE', fontsize=16)
+        bestrmseplot.set_xlabel('Actual Values', fontsize=16)
+        bestrmseplot.set_ylabel('Predicted Values', fontsize=16)
+        ymin = np.amin(bestrmsepredicted) - np.std(bestrmsepredicted)
+        ymax = np.amax(bestrmsepredicted) + np.std(bestrmsepredicted)
+        xmin = np.amin(bestrmsedata) - np.std(bestrmsedata)
+        xmax = np.amax(bestrmsedata) + np.std(bestrmsedata)
+        bestrmseplot.set_ylim([ymin, ymax])
+        bestrmseplot.set_xlim([xmin, xmax])
 
-            rmsehist = figure.add_subplot(2, 2, 4)
-            rmsehist.locator_params(axis='x', nbins=5)
-            plt.hist(rmsevalues, histtype="bar")
-            rmsehist.set_title('Histogram of RMSE Values', fontsize=16)
-            rmsehist.set_xlabel('RMSE Value', fontsize=16)
-            rmsehist.set_ylabel('Number in Range', fontsize=16)
+        worstrmseplot = figure.add_subplot(2, 2, 3)
+        worstrmseplot.locator_params(axis='x', nbins=5)
+        plt.scatter(worstrmsedata, worstrmsepredicted, marker="o", color="b")
+        worstrmseplot.set_title('Actual vs. Predicted Values for Worst RMSE', fontsize=16)
+        worstrmseplot.set_xlabel('Actual Values', fontsize=16)
+        worstrmseplot.set_ylabel('Predicted Values', fontsize=16)
+        ymin = np.amin(worstrmsepredicted) - np.std(worstrmsepredicted)
+        ymax = np.amax(worstrmsepredicted) + np.std(worstrmsepredicted)
+        xmin = np.amin(worstrmsedata) - np.std(worstrmsedata)
+        xmax = np.amax(worstrmsedata) + np.std(worstrmsedata)
+        worstrmseplot.set_ylim([ymin, ymax])
+        worstrmseplot.set_xlim([xmin, xmax])
 
-            plt.tight_layout()
-            # save the figure
-            titlestring = str(yvariablename) + "_" + batch + "_kFold.png"
-            # make the figure more readable
-            figure.set_size_inches(14.2, 8)
-            figure.savefig("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\" + titlestring)
+        rmsehist = figure.add_subplot(2, 2, 4)
+        rmsehist.locator_params(axis='x', nbins=5)
+        plt.hist(rmsevalues, histtype="bar")
+        rmsehist.set_title('Histogram of RMSE Values', fontsize=16)
+        rmsehist.set_xlabel('RMSE Value', fontsize=16)
+        rmsehist.set_ylabel('Number in Range', fontsize=16)
 
-            # Update all variables lists
-            normalizedrmsedata = rmsevalues / y_std
-            normalizedrmsedata = normalizedrmsedata.reshape(1, np.size(normalizedrmsedata))
-            all_rmse_data.append(normalizedrmsedata)
+        plt.tight_layout()
+        # save the figure
+        titlestring = str(yvariablename) + "_MaxTreeDepth" + str(tree_depth) + "_kFold.png"
+        # make the figure more readable
+        figure.set_size_inches(14.2, 8)
+        figure.savefig("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\" + titlestring)
 
-        # Calculate the average RMSE for this run and added them as input param for createstring method
-        avg_rmse = avg_rmse_sum / float(kf.get_n_splits())
-        outputstring = createstring(rmsevalues, bestrmse, worstrmse, avg_rmse, yvariablename, yvariable, r2values, bestr2,
-                                    worstr2, num_trees)
-        output_file.write(outputstring)
+    # Update all variables lists
+    normalizedrmsedata = rmsevalues / y_std
+    normalizedrmsedata = normalizedrmsedata.reshape(1, np.size(normalizedrmsedata))
+    all_rmse_data.append(normalizedrmsedata)
+
+    # Calculate the average RMSE for this run and added them as input param for createstring method
+    outputstring = createstring(rmsevalues, bestrmse, worstrmse, yvariablename, yvariable, r2values, bestr2,
+                                worstr2, num_trees=90, tree_depth=tree_depth)
+    output_file.write(outputstring)
+
+    # Check out the trees
+    rand_forest_trees = rand_forest.estimators_
+    i = 1
+    tree_depths = list()
+    tree_info_doc = open("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\" + yvariablename
+                         + " tree_info.txt", 'w')
+    tree_info_doc.write("Max Depth of trees \n\n")
+
+    for my_tree in rand_forest_trees:
+        # tree.export_graphviz(my_tree, out_file="C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\Tree " +
+        #                     str(i) + ".dot")
+        curr_depth = my_tree.tree_.max_depth
+        tree_info_doc.write("Tree " + str(i) + ": " + str(curr_depth) + "\n")
+        tree_depths.append(curr_depth)
+        i += 1
 
     output_file.close()
+    tree_info_doc.close()
 
 # Run the script:
 if __name__ == '__main__':
