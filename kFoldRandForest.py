@@ -7,7 +7,6 @@ from sklearn.ensemble import RandomForestRegressor
 from math import sqrt
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
-from sklearn.model_selection import KFold
 
 
 # TODO initializeData()
@@ -249,9 +248,7 @@ def main():
     output_file.write(numberoftestsstring)
 
     allrmsedata = list()
-
-    # Create the model here so we use the same model on all sets for a given x
-    rand_forest = RandomForestRegressor(n_estimators=90, warm_start=True, criterion="mae", bootstrap=True)
+    allrsquareddata = list()
 
     # For each of the y variables, run a random forest using all of the x variables
     for i in range(1, numyvariables):
@@ -283,15 +280,40 @@ def main():
         worstr2 = None
 
         # Break the data into folds to be used for k-fold CV.
-        kf = KFold(n_splits=10, shuffle=True, random_state=None)
+        rows_add = int(len(xvariables)/num_folds)
+        # Create train and test to hold data later
+        xtrainvalues = np.ndarray(shape=(len(xvariables) - rows_add, len(xvariables[0, :])))
+        ytrainvalues = np.ndarray(shape=(rows_add*(num_folds - 1), 1))
+
+        xtestvalues = np.ndarray(shape=(rows_add, len(xvariables[:, 0])))
+        ytestvalues_normalized = np.ndarray(shape=(rows_add, len(y_normalized)))
+
+        # Create the model here so we use the same model on all sets for a given x
+        rand_forest = RandomForestRegressor()
 
         # Perform a specified number of CV tests on the data:
-        for train_index, test_index in kf.split(yvariable):
-            xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
-            ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
+        for z in range(0, num_folds - 1):
+            # Use different folds for train and test each run.
+            # Edge case: last fold. If not at last fold, grab all rows needed. Otherwise, grab i to end of the rows.
+            if z != z - 1:
+                xtestvalues = xvariables[z:z + rows_add, :]
+                ytestvalues_normalized = y_normalized[z:z + rows_add]
+            else:
+                xtestvalues = xvariables[z:, :]
+                ytestvalues_normalized = y_normalized[z:z + rows_add, :]
+
+            # Edge case: first fold
+            if z != 0:
+                xtrainvalues = xvariables[:z*rows_add, :]
+                xtrainvalues = np.concatenate((xtrainvalues, xvariables[(z*rows_add) + rows_add:, :]))
+                ytrainvalues = y_normalized[:z*rows_add, :]
+                ytrainvalues = np.concatenate((ytrainvalues, y_normalized[(z*rows_add) + rows_add:, :]))
+            else:
+                xtrainvalues = xvariables[rows_add:, :]
+                ytrainvalues = y_normalized[rows_add:, :]
 
             # Fit the model
-            rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
+            rand_forest.fit(xtrainvalues, ytrainvalues.ravel())
             # Predict the y values
             predictedyvalues_normalized = rand_forest.predict(xtestvalues)
 
