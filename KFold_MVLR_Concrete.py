@@ -318,7 +318,7 @@ def main():
     # Create a string that will be added to each of the plots. This will include information such as the specific
     #  type of test as well as the date and time it was run. This will also be added to the output .txt file.
     dateandtime = time.strftime("%Y-%m-%d at %H:%M")
-    additionalinfo = "Multivariate Linear Regression run on " + dateandtime
+    additionalinfo = "Multivariate Linear Regression run on " + dateandtime + " using k-fold CV"
 
     # Create a .txt file to store the output in:
     output_file = open("output_file.txt",'w')
@@ -531,6 +531,7 @@ def main():
         plt.xticks(x, yvariablenames[1:len(yvariablenames)], rotation='vertical')
         rmsebp.set_xlabel('Y Variables')
         rmsebp.set_ylabel('RMSE / std')
+        rmseboxplot.text(0, 0, additionalinfo)
         plt.tight_layout()
 
         # R^2 plot
@@ -542,6 +543,7 @@ def main():
         plt.xticks(x, yvariablenames[1:len(yvariablenames)], rotation='vertical')
         rsquaredbp.set_xlabel('Y Variables')
         rsquaredbp.set_ylabel('R^2 Value')
+        rsquaredboxplot.text(0, 0, additionalinfo)
         plt.tight_layout()
 
     output_file.close()

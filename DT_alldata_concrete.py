@@ -129,12 +129,11 @@ def initializeData():
                        inplace=True)
 
     # Remake the dataframe to include the onehotencoded columns instead of the regular columns.
-    firstHalf = allX.ix[:, :21]
-    cte = allX.ix[:, 25]
+    firstHalf = allX.ix[:, :22]
     oneHotEncodedframe = pd.concat([encodedMixP, encodedSCM, encodedFineA, encodedCoarseA], axis=1)
     secondHalf = xValues.ix[:, 6:]
 
-    completearray = pd.concat([firstHalf, cte, oneHotEncodedframe, secondHalf], axis=1)
+    completearray = pd.concat([firstHalf, oneHotEncodedframe, secondHalf], axis=1)
     variablenames = list(completearray.columns.values)
     # convert to numpy array
     completenumpyarray = completearray.as_matrix()
