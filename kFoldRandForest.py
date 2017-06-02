@@ -252,72 +252,74 @@ def main():
     # For each of the y variables, run a random forest using all of the x variables
     for i in range(1, numyvariables):
 
-        # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
-        yvariable = yvariables[i]
-        currentyvariable = yvariablenames[i]
+        for j in range(0, 10):
 
-        # Now, want to normalize the y variable
-        y_mean = yvariable.mean()
-        y_std = yvariable.std()
-        y_normalized = (yvariable - y_mean) / y_std
-        y_normalized = np.reshape(y_normalized, newshape=(len(y_normalized), 1))
+            # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
+            yvariable = yvariables[i]
+            currentyvariable = yvariablenames[i]
 
-        # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
-        rmsevalues = list()
-        # Initialize an array to store the R^2 values in
-        r2values = np.array([])
-        # Initialize values for the best and worst RMSE
-        bestrmse = 1000000
-        bestrmsedata = None
-        bestrmsepredicted = None
-        worstrmse = 0
-        worstrmsedata = np.ones(shape=1)
-        worstrmsepredicted = None
-        avg_rmse_sum = 0
-        # Initialize values for R^2 values that correspond to the best and worst RMSE
-        bestr2 = None
-        worstr2 = None
+            # Now, want to normalize the y variable
+            y_mean = yvariable.mean()
+            y_std = yvariable.std()
+            y_normalized = (yvariable - y_mean) / y_std
+            y_normalized = np.reshape(y_normalized, newshape=(len(y_normalized), 1))
 
-        # Create the model here so we use the same model on all sets for a given x
-        rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=warm_start_val, criterion=criterion_val,
-                                            bootstrap=bootstrap_val)
+            # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
+            rmsevalues = list()
+            # Initialize an array to store the R^2 values in
+            r2values = np.array([])
+            # Initialize values for the best and worst RMSE
+            bestrmse = 1000000
+            bestrmsedata = None
+            bestrmsepredicted = None
+            worstrmse = 0
+            worstrmsedata = np.ones(shape=1)
+            worstrmsepredicted = None
+            avg_rmse_sum = 0
+            # Initialize values for R^2 values that correspond to the best and worst RMSE
+            bestr2 = None
+            worstr2 = None
 
-        # Break the data into folds to be used for k-fold CV.
-        kf = KFold(n_splits=10, shuffle=True, random_state=None)
+            # Create the model here so we use the same model on all sets for a given x
+            rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=warm_start_val, criterion=criterion_val,
+                                                bootstrap=bootstrap_val)
 
-        # Perform a specified number of CV tests on the data:
-        for train_index, test_index in kf.split(yvariable):
-            xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
-            ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
+            # Break the data into folds to be used for k-fold CV.
+            kf = KFold(n_splits=10, shuffle=True, random_state=None)
 
-            # Fit the model
-            rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
-            # Predict the y values
-            predictedyvalues_normalized = rand_forest.predict(xtestvalues)
+            # Perform a specified number of CV tests on the data:
+            for train_index, test_index in kf.split(yvariable):
+                xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
+                ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
 
-            # De-normalize the data
-            ytestvalues = (ytestvalues_normalized * y_std) + y_mean
-            predictedyvalues = (predictedyvalues_normalized * y_std) + y_mean
+                # Fit the model
+                rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
+                # Predict the y values
+                predictedyvalues_normalized = rand_forest.predict(xtestvalues)
 
-            # Calculate the RMSE value and add it to the current array.
-            rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
-            rmsevalues = np.append(rmsevalues, [rmse])
+                # De-normalize the data
+                ytestvalues = (ytestvalues_normalized * y_std) + y_mean
+                predictedyvalues = (predictedyvalues_normalized * y_std) + y_mean
 
-            # Calculate the R^2 value and add it to the array
-            r2 = r2_score(ytestvalues, predictedyvalues)
-            r2values = np.append(r2values, [r2])
+                # Calculate the RMSE value and add it to the current array.
+                rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
+                rmsevalues = np.append(rmsevalues, [rmse])
 
-            # Check whether or not this RMSE is the best / worst RMSE of the current y variable
-            if rmse < bestrmse:
-                bestrmse = rmse
-                bestrmsedata = ytestvalues
-                bestrmsepredicted = predictedyvalues
-                bestr2 = r2
-            elif rmse > worstrmse:
-                worstrmse = rmse
-                worstrmsedata = ytestvalues
-                worstrmsepredicted = predictedyvalues
-                worstr2 = r2
+                # Calculate the R^2 value and add it to the array
+                r2 = r2_score(ytestvalues, predictedyvalues)
+                r2values = np.append(r2values, [r2])
+
+                # Check whether or not this RMSE is the best / worst RMSE of the current y variable
+                if rmse < bestrmse:
+                    bestrmse = rmse
+                    bestrmsedata = ytestvalues
+                    bestrmsepredicted = predictedyvalues
+                    bestr2 = r2
+                elif rmse > worstrmse:
+                    worstrmse = rmse
+                    worstrmsedata = ytestvalues
+                    worstrmsepredicted = predictedyvalues
+                    worstr2 = r2
 
         # If we want to make plots, create a figure that will store the subplots (for this particular y variable)
         if makeplots:
@@ -419,12 +421,11 @@ def main():
         # Clear the plot to make sure plots don't overlap.
         # tree_depth_plot.clf()
 
-
         # Calculate the average RMSE for this run and added them as input param for createstring method
         avg_rmse = avg_rmse_sum / float(num_folds)
         outputstring = createstring(rmsevalues, bestrmse, worstrmse, avg_rmse, currentyvariable, yvariable,
-                                    r2values,
-                                    bestr2, worstr2)
+                                    r2values, bestr2, worstr2)
+        print("RUN " + str(j) + " COMPLETED FOR " + str(currentyvariable))
         output_file.write(outputstring)
 
     # RMSE boxplot comparing all y variables
