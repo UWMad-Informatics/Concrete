@@ -252,40 +252,41 @@ def main():
     # For each of the y variables, run a random forest using all of the x variables
     for i in range(1, numyvariables):
 
+        # Create the model here so we use the same model on all sets for a given x
+        rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=warm_start_val, criterion=criterion_val,
+                                            bootstrap=bootstrap_val)
+
+        # Break the data into folds to be used for k-fold CV.
+        kf = KFold(n_splits=10, shuffle=True, random_state=None)
+
+        # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
+        rmsevalues = list()
+        # Initialize an array to store the R^2 values in
+        r2values = np.array([])
+
+        # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
+        yvariable = yvariables[i]
+        currentyvariable = yvariablenames[i]
+
+        # Now, want to normalize the y variable
+        y_mean = yvariable.mean()
+        y_std = yvariable.std()
+        y_normalized = (yvariable - y_mean) / y_std
+        y_normalized = np.reshape(y_normalized, newshape=(len(y_normalized), 1))
+
+        # Initialize values for the best and worst RMSE
+        bestrmse = 1000000
+        bestrmsedata = None
+        bestrmsepredicted = None
+        worstrmse = 0
+        worstrmsedata = np.ones(shape=1)
+        worstrmsepredicted = None
+        avg_rmse_sum = 0
+        # Initialize values for R^2 values that correspond to the best and worst RMSE
+        bestr2 = None
+        worstr2 = None
+
         for j in range(0, 10):
-
-            # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
-            yvariable = yvariables[i]
-            currentyvariable = yvariablenames[i]
-
-            # Now, want to normalize the y variable
-            y_mean = yvariable.mean()
-            y_std = yvariable.std()
-            y_normalized = (yvariable - y_mean) / y_std
-            y_normalized = np.reshape(y_normalized, newshape=(len(y_normalized), 1))
-
-            # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
-            rmsevalues = list()
-            # Initialize an array to store the R^2 values in
-            r2values = np.array([])
-            # Initialize values for the best and worst RMSE
-            bestrmse = 1000000
-            bestrmsedata = None
-            bestrmsepredicted = None
-            worstrmse = 0
-            worstrmsedata = np.ones(shape=1)
-            worstrmsepredicted = None
-            avg_rmse_sum = 0
-            # Initialize values for R^2 values that correspond to the best and worst RMSE
-            bestr2 = None
-            worstr2 = None
-
-            # Create the model here so we use the same model on all sets for a given x
-            rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=warm_start_val, criterion=criterion_val,
-                                                bootstrap=bootstrap_val)
-
-            # Break the data into folds to be used for k-fold CV.
-            kf = KFold(n_splits=10, shuffle=True, random_state=None)
 
             # Perform a specified number of CV tests on the data:
             for train_index, test_index in kf.split(yvariable):
@@ -383,10 +384,11 @@ def main():
             # make the figure more readable
             figure.set_size_inches(14.2, 8)
             # CHANGE: Save plots to a folder in my computer
-            figure.savefig("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\" + titlestring)
+            figure.savefig("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\" + titlestring, bbox_inches
+                           ='tight')
 
             # Update all variables lists
-            normalizedrmsedata = rmsevalues / y_mean
+            normalizedrmsedata = rmsevalues / y_std
             normalizedrmsedata = normalizedrmsedata.reshape(1, np.size(normalizedrmsedata))
             allrmsedata.append(normalizedrmsedata)
 
@@ -425,7 +427,6 @@ def main():
         avg_rmse = avg_rmse_sum / float(num_folds)
         outputstring = createstring(rmsevalues, bestrmse, worstrmse, avg_rmse, currentyvariable, yvariable,
                                     r2values, bestr2, worstr2)
-        print("RUN " + str(j) + " COMPLETED FOR " + str(currentyvariable))
         output_file.write(outputstring)
 
     # RMSE boxplot comparing all y variables
@@ -436,7 +437,7 @@ def main():
     x = range(1, len(yvariablenames))
     plt.xticks(x, yvariablenames[1:len(yvariablenames)], rotation='vertical')
     rmsebp.set_xlabel('Y Variables')
-    rmsebp.set_ylabel('RMSE / Y Variable Mean')
+    rmsebp.set_ylabel('RMSE / Y Variable Standard Deviation')
     rmseboxplot.tight_layout()
     rmseboxplot.savefig("C:\\Users\\mvane\\Documents\\Skunkworks\\Random Forest Results\\RMSE Box and Whisker")
 
