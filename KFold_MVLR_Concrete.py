@@ -10,189 +10,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 from sklearn.model_selection import KFold
 
-
-
-def initialize_data():
-
-    """ Initializes the data taken from the completeData.csv and the formattedXValues.csv. Note that these must be
-    the names of the arrays in your folder."""
-
-    # Read in the CSV
-    all_x = pd.read_csv('completeData.csv', keep_default_na=False)
-    x_values = pd.read_csv('formattedXValues.csv')
-    filename = "completeData.csv and formattedXValues.csv"
-
-    # Separate the CSV columns into array variables and numpy vars to store new categorical variables
-    mix_num = all_x['Mix Number']
-    mix_p = all_x['Mix Proportion']
-    mix_p_final = np.empty(len(mix_p))
-    scm = all_x['SCM']
-    scm_final = np.empty(len(scm))
-    fine_a = all_x['Fine Aggregate']
-    fine_a_final = np.empty(len(fine_a))
-    coarse_a = all_x['Coarse Aggregate']
-    coarse_a_final = np.empty(len(coarse_a))
-
-    # Loop through every mix in the csv file
-    # Not sure how to do 3 different variables
-    for y in range(0, len(mix_num)):
-        # Sort Mix Proportions
-        if mix_p[y] == "A-F":
-            mix_p_final[y] = 2
-        elif mix_p[y] == "A-S":
-            mix_p_final[y] = 1
-        elif mix_p[y] == "A":
-            mix_p_final[y] = 0
-        else:
-            print('Unidentified Variable in mixP: ')
-            print(mix_p[y])
-
-        # Sort SCM into slag or fly ash
-        if scm[y] == 'N/A':
-            scm_final[y] = 1000
-        elif scm[y] == 'Slag 1':
-            scm_final[y] = 0
-        elif scm[y] == 'Slag 2':
-            scm_final[y] = 0
-        elif scm[y] == 'Fly Ash 1':
-            scm_final[y] = 1
-        elif scm[y] == 'Fly Ash 2':
-            scm_final[y] = 1
-        elif scm[y] == 'Fly Ash 3':
-            scm_final[y] = 1
-        else:
-            print('Unidentified Variable in scm: ')
-            print(scm[y])
-
-        # Sort the fine aggregate
-        if fine_a[y] == 'Sand A':
-            fine_a_final[y] = 0
-        elif fine_a[y] == 'Sand B':
-            fine_a_final[y] = 1
-        else:
-            print('Unidentified Variable in fineA: ')
-            print(fine_a[y])
-
-        # Sort the coarse aggregate
-        if coarse_a[y] == 'GG1':
-            coarse_a_final[y] = 0
-        elif coarse_a[y] == 'GG2':
-            coarse_a_final[y] = 0
-        elif coarse_a[y] == 'GG3':
-            coarse_a_final[y] = 0
-        elif coarse_a[y] == 'GG4':
-            coarse_a_final[y] = 0
-        elif coarse_a[y] == 'GG5':
-            coarse_a_final[y] = 0
-        elif coarse_a[y] == 'GG6':
-            coarse_a_final[y] = 0
-        elif coarse_a[y] == 'CS1':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS2':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS3':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS4':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS5':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS6':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS7':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS8':
-            coarse_a_final[y] = 1
-        elif coarse_a[y] == 'CS9':
-            coarse_a_final[y] = 1
-        else:
-            print('Unidentified Variable in coarseA: ')
-            print(coarse_a[y])
-
-    # One Hot Encode the sorted variables
-    encoded_mix_p = pd.get_dummies(mix_p_final)
-    encoded_scm = pd.get_dummies(scm_final)
-    encoded_fine_a = pd.get_dummies(fine_a_final)
-    encoded_coarse_a = pd.get_dummies(coarse_a_final)
-
-    # Update the headers for onehotencoded variables
-    # Get the current variable names
-    encoded_scm_list = list(encoded_scm.columns.values)
-    encoded_fine_a_list = list(encoded_fine_a.columns.values)
-    encoded_coarse_a_list = list(encoded_coarse_a.columns.values)
-    encoded_mix_p_list = list(encoded_mix_p.columns.values)
-    # go through and replace the current names with the updated ones
-    encoded_scm.rename(columns={encoded_scm_list[0]: 'SCM_0', encoded_scm_list[1]: 'SCM_1', encoded_scm_list[2]:
-                       'SCM_1000'}, inplace=True)
-    encoded_fine_a.rename(columns={encoded_fine_a_list[0]: 'FineA_0', encoded_fine_a_list[1]: 'FineA_1'}, inplace=True)
-    encoded_coarse_a.rename(columns={encoded_coarse_a_list[0]: 'CoarseA_0', encoded_coarse_a_list[1]: 'CoarseA_1'},
-                            inplace=True)
-    encoded_mix_p.rename(columns={encoded_mix_p_list[0]: 'MixP_0', encoded_mix_p_list[1]: 'MixP_1',
-                                  encoded_mix_p_list[2]: 'MixP_2'}, inplace=True)
-
-    # Remake the dataframe to include the onehotencoded columns instead of the regular columns.
-    first_half = all_x.ix[:, :21]
-    cte = all_x.ix[:, 25]
-    onehot_encoded_frame = pd.concat([encoded_mix_p, encoded_scm, encoded_fine_a, encoded_coarse_a], axis=1)
-    second_half = x_values.ix[:, 6:]
-    complete_array = pd.concat([first_half, cte, onehot_encoded_frame, second_half], axis=1)
-    variable_names = list(complete_array.columns.values)
-    # convert to numpy array
-    completenumpyarray = complete_array.as_matrix()
-
-    # Now, Ask whether or not to run decision trees on batch A data or batch B
-    batch = input("Which batch to run tests on (A or B)? ")
-
-    if batch == "A":
-
-        # break up the data into the batch A values
-        batch_a_ycolumns = [0, 5, 6, 7, 8, 21]
-        yvariables = np.transpose(completenumpyarray[:, batch_a_ycolumns])
-        numyvariables = 6
-        yvariablenames = [variable_names[x] for x in batch_a_ycolumns]
-        batch_a_xcolumns = [23, 24, 25, 26, 28, 29, 30, 31, 32, 35, 38, 41]
-        # normalize the x variables. Will normalize y variables in the main body
-        # after a histogram of the data is created.
-        xvariables = completenumpyarray[:, batch_a_xcolumns]
-        # Normalize each of the x variables
-        # get number of columns of x variables
-        x_variables_shape = xvariables.shape
-        # index through each of the columns and normalize
-        for p in range(0, x_variables_shape[1]):
-            x_mean = xvariables[:, p].mean()
-            x_std = xvariables[:, p].std()
-            # index through each value of the column (thus, go through each row) and divide by the l2 norm
-            xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
-        xvariablenames = [variable_names[x] for x in batch_a_xcolumns]
-
-    elif batch == "B":
-
-        # break up the data into the batch B values
-        batch_b_ycolumns = [0, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-        yvariables = np.transpose(completenumpyarray[:, batch_b_ycolumns])
-        numyvariables = 17
-        yvariablenames = [variable_names[x] for x in batch_b_ycolumns]
-        batch_b_xcolumns = [23, 24, 25, 26, 28, 29, 30, 31, 33, 36, 39, 42]
-        # normalize the x variables. Will normalize y variables in the main body
-        # after a histogram of the data is created.
-        xvariables = completenumpyarray[:, batch_b_xcolumns]
-        # Normalize each of the x variables
-        # get number of columns of x variables
-        x_variables_shape = xvariables.shape
-        # index through each of the columns and find the l2 norm
-        for p in range(0, x_variables_shape[1]):
-            x_mean = xvariables[:, p].mean()
-            x_std = xvariables[:, p].std()
-            # index through each value of the column (thus, go through each row) and divide by the l2 norm
-            xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
-        xvariablenames = [variable_names[x] for x in batch_b_xcolumns]
-
-    else:
-        print("Invalid Input.")
-        exit(0)
-
-    return completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables, batch
-
-
 def createstring(y_variable, rmse_values, best_rmse, best_coef, best_intercept, worst_rmse, worst_coef, worst_intercept,
                  current_y_variable, x_variable_names, r2values, bestr2, worstr2):
 
@@ -235,9 +52,70 @@ def createstring(y_variable, rmse_values, best_rmse, best_coef, best_intercept, 
 
 
 def main():
+    # Initialize the data here so that we do not need to onehotencode during every single run
+    batchtouse = "batch A"
 
-    completenumpyarray, xvariables, filename, xvariablenames, yvariablenames, numyvariables, yvariables, batch \
-        = initialize_data()
+    if batchtouse == "batch A":
+
+        # Store the name of the batch we are using
+        batch = 'batch A'
+        # Store the name of the input file
+        filename = "encodedBatchAData.csv"
+        # Read the input file
+        encodedbatchadata = pd.read_csv("encodedBatchAData.csv")
+        # separate out the x and y variables
+        xvariables = encodedbatchadata.ix[:, 1:16]
+        yvariables = encodedbatchadata.ix[:, 16:]
+        # Store the names of the x and y variables
+        xvariablenames = list(xvariables.columns.values)
+        yvariablenames = list(yvariables.columns.values)
+        # Store the number of y variables (will be used for later for loops)
+        numyvariables = len(yvariablenames)
+        # Convert the x and y variables from pandas dataframes to numpy arrays
+        xvariables = xvariables.as_matrix()
+        yvariables = yvariables.as_matrix()
+        yvariables = yvariables.transpose()
+
+        # Normalize the xvariables here. y variables will be later normalized
+        # get number of columns of x variables
+        x_variables_shape = xvariables.shape
+        # index through each of the columns and normalize data by subtracting mean, dividing standard dev.
+        for p in range(0, x_variables_shape[1]):
+            x_mean = xvariables[:, p].mean()
+            x_std = xvariables[:, p].std()
+            xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
+
+    else:
+
+        # Store the name of the batch we are using
+        batch = 'batch B'
+        # Store the name of the input file
+        filename = "encodedBatchBData.csv"
+        # Read the input file
+        encodedbatchbdata = pd.read_csv("encodedBatchBData.csv")
+        # separate out the x and y variables
+        xvariables = encodedbatchbdata.ix[:, 1:18]
+        yvariables = encodedbatchbdata.ix[:, 18:]
+        # Store the names of the x and y variables
+        xvariablenames = list(xvariables.columns.values)
+        print(xvariablenames)
+        yvariablenames = list(yvariables.columns.values)
+        print(yvariablenames)
+        # Store the number of y variables (will be used for later for loops)
+        numyvariables = len(yvariablenames)
+        # Convert the x and y variables from pandas dataframes to numpy arrays
+        xvariables = xvariables.as_matrix()
+        yvariables = yvariables.as_matrix()
+        yvariables = yvariables.transpose()
+
+        # Normalize the xvariables here. y variables will be later normalized
+        # get number of columns of x variables
+        x_variables_shape = xvariables.shape
+        # index through each of the columns and normalize data by subtracting mean, dividing standard dev.
+        for p in range(0, x_variables_shape[1]):
+            x_mean = xvariables[:, p].mean()
+            x_std = xvariables[:, p].std()
+            xvariables[:, p] = (xvariables[:, p] - x_mean) / x_std
 
     # Prompt whether or not creating plots is desired
     makeplots = True
