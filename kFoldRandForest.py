@@ -140,14 +140,7 @@ def main():
     allrmsedata = list()
 
     # For each of the y variables, run a random forest using all of the x variables
-    for i in range(1, numyvariables):
-
-        # Create the model here so we use the same model on all sets for a given x
-        rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=warm_start_val, criterion=criterion_val,
-                                            bootstrap=bootstrap_val)
-
-        # Break the data into folds to be used for k-fold CV.
-        kf = KFold(n_splits=10, shuffle=True, random_state=None)
+    for i in range(0, numyvariables):
 
         # Initialize an array to store the RMSE values in (these will be used later during cross validation tests).
         rmsevalues = list()
@@ -157,6 +150,9 @@ def main():
         # Separate out the current y variable, shape it to appropriate dimensions so that it matches the x variables
         yvariable = yvariables[i]
         currentyvariable = yvariablenames[i]
+
+        print(currentyvariable)
+        print(yvariable.std())
 
         # Now, want to normalize the y variable
         y_mean = yvariable.mean()
@@ -176,41 +172,57 @@ def main():
         bestr2 = None
         worstr2 = None
 
-        for j in range(0, 10):
+        for z in range(0, 10):
 
-            # Perform a specified number of CV tests on the data:
-            for train_index, test_index in kf.split(yvariable):
-                xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
-                ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
+            # Create the model here so we use the same model on all sets for a given x
+            rand_forest = RandomForestRegressor(n_estimators=num_trees, warm_start=warm_start_val, criterion=criterion_val,
+                                            bootstrap=bootstrap_val)
 
-                # Fit the model
-                rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
-                # Predict the y values
-                predictedyvalues_normalized = rand_forest.predict(xtestvalues)
+            # Break the data into folds to be used for k-fold CV.
+            kf = KFold(n_splits=10, shuffle=True, random_state=None)
 
-                # De-normalize the data
-                ytestvalues = (ytestvalues_normalized * y_std) + y_mean
-                predictedyvalues = (predictedyvalues_normalized * y_std) + y_mean
+            for j in range(0, 10):
 
-                # Calculate the RMSE value and add it to the current array.
-                rmse = sqrt(mean_squared_error(ytestvalues, predictedyvalues))
-                rmsevalues = np.append(rmsevalues, [rmse])
+                allFoldsPredicted = np.array([])
+                allFoldsActual = np.array([])
 
-                # Calculate the R^2 value and add it to the array
-                r2 = r2_score(ytestvalues, predictedyvalues)
-                r2values = np.append(r2values, [r2])
+                # Perform a specified number of CV tests on the data:
+                for train_index, test_index in kf.split(yvariable):
+                    xtrainvalues, xtestvalues = xvariables[train_index], xvariables[test_index]
+                    ytrainvalues_normalized, ytestvalues_normalized = y_normalized[train_index], y_normalized[test_index]
 
-                # Check whether or not this RMSE is the best / worst RMSE of the current y variable
-                if rmse < bestrmse:
-                    bestrmse = rmse
-                    bestrmsedata = ytestvalues
-                    bestrmsepredicted = predictedyvalues
-                    bestr2 = r2
-                elif rmse > worstrmse:
-                    worstrmse = rmse
-                    worstrmsedata = ytestvalues
-                    worstrmsepredicted = predictedyvalues
-                    worstr2 = r2
+                    # Fit the model
+                    rand_forest.fit(xtrainvalues, ytrainvalues_normalized.ravel())
+                    # Predict the y values
+                    predictedyvalues_normalized = rand_forest.predict(xtestvalues)
+
+                    # De-normalize the data
+                    ytestvalues = (ytestvalues_normalized * y_std) + y_mean
+                    predictedyvalues = (predictedyvalues_normalized * y_std) + y_mean
+
+                    # Add the data to the complete fold array
+                    allFoldsPredicted = np.append(allFoldsPredicted, predictedyvalues)
+                    allFoldsActual = np.append(allFoldsActual, ytestvalues)
+
+            # Calculate the RMSE value and add it to the current array.
+            rmse = sqrt(mean_squared_error(allFoldsActual, allFoldsPredicted))
+            rmsevalues = np.append(rmsevalues, [rmse])
+
+            # Calculate the R^2 value and add it to the array
+            r2 = r2_score(allFoldsActual, allFoldsPredicted)
+            r2values = np.append(r2values, [r2])
+
+            # Check whether or not this RMSE is the best / worst RMSE of the current y variable
+            if rmse < bestrmse:
+                bestrmse = rmse
+                bestrmsedata = allFoldsActual
+                bestrmsepredicted = allFoldsPredicted
+                bestr2 = r2
+            elif rmse > worstrmse:
+                worstrmse = rmse
+                worstrmsedata = allFoldsActual
+                worstrmsepredicted = allFoldsPredicted
+                worstr2 = r2
 
         # If we want to make plots, create a figure that will store the subplots (for this particular y variable)
         if makeplots:
@@ -326,7 +338,7 @@ def main():
     rmsebp.boxplot(allrmsedata, sym="")
     rmsebp.set_title('Normalized RMSE Data for Each Y Variable Using ' + str(num_folds) + "-fold CV")
     x = range(1, len(yvariablenames))
-    plt.xticks(x, yvariablenames[1:len(yvariablenames)], rotation='vertical')
+    plt.xticks(x, yvariablenames[0:len(yvariablenames)], rotation='vertical')
     rmsebp.set_xlabel('Y Variables')
     rmsebp.set_ylabel('RMSE / Y Variable Standard Deviation')
     rmseboxplot.tight_layout()
